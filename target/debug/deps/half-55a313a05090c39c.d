@@ -1,0 +1,12 @@
+/Users/dannyvanswieten/Code/bvh/target/debug/deps/half-55a313a05090c39c.rmeta: /Users/dannyvanswieten/.cargo/registry/src/github.com-1ecc6299db9ec823/half-2.2.0/src/lib.rs /Users/dannyvanswieten/.cargo/registry/src/github.com-1ecc6299db9ec823/half-2.2.0/src/bfloat.rs /Users/dannyvanswieten/.cargo/registry/src/github.com-1ecc6299db9ec823/half-2.2.0/src/bfloat/convert.rs /Users/dannyvanswieten/.cargo/registry/src/github.com-1ecc6299db9ec823/half-2.2.0/src/binary16.rs /Users/dannyvanswieten/.cargo/registry/src/github.com-1ecc6299db9ec823/half-2.2.0/src/binary16/convert.rs /Users/dannyvanswieten/.cargo/registry/src/github.com-1ecc6299db9ec823/half-2.2.0/src/leading_zeros.rs /Users/dannyvanswieten/.cargo/registry/src/github.com-1ecc6299db9ec823/half-2.2.0/src/slice.rs /Users/dannyvanswieten/.cargo/registry/src/github.com-1ecc6299db9ec823/half-2.2.0/src/vec.rs
+
+/Users/dannyvanswieten/Code/bvh/target/debug/deps/half-55a313a05090c39c.d: /Users/dannyvanswieten/.cargo/registry/src/github.com-1ecc6299db9ec823/half-2.2.0/src/lib.rs /Users/dannyvanswieten/.cargo/registry/src/github.com-1ecc6299db9ec823/half-2.2.0/src/bfloat.rs /Users/dannyvanswieten/.cargo/registry/src/github.com-1ecc6299db9ec823/half-2.2.0/src/bfloat/convert.rs /Users/dannyvanswieten/.cargo/registry/src/github.com-1ecc6299db9ec823/half-2.2.0/src/binary16.rs /Users/dannyvanswieten/.cargo/registry/src/github.com-1ecc6299db9ec823/half-2.2.0/src/binary16/convert.rs /Users/dannyvanswieten/.cargo/registry/src/github.com-1ecc6299db9ec823/half-2.2.0/src/leading_zeros.rs /Users/dannyvanswieten/.cargo/registry/src/github.com-1ecc6299db9ec823/half-2.2.0/src/slice.rs /Users/dannyvanswieten/.cargo/registry/src/github.com-1ecc6299db9ec823/half-2.2.0/src/vec.rs
+
+/Users/dannyvanswieten/.cargo/registry/src/github.com-1ecc6299db9ec823/half-2.2.0/src/lib.rs:
+/Users/dannyvanswieten/.cargo/registry/src/github.com-1ecc6299db9ec823/half-2.2.0/src/bfloat.rs:
+/Users/dannyvanswieten/.cargo/registry/src/github.com-1ecc6299db9ec823/half-2.2.0/src/bfloat/convert.rs:
+/Users/dannyvanswieten/.cargo/registry/src/github.com-1ecc6299db9ec823/half-2.2.0/src/binary16.rs:
+/Users/dannyvanswieten/.cargo/registry/src/github.com-1ecc6299db9ec823/half-2.2.0/src/binary16/convert.rs:
+/Users/dannyvanswieten/.cargo/registry/src/github.com-1ecc6299db9ec823/half-2.2.0/src/leading_zeros.rs:
+/Users/dannyvanswieten/.cargo/registry/src/github.com-1ecc6299db9ec823/half-2.2.0/src/slice.rs:
+/Users/dannyvanswieten/.cargo/registry/src/github.com-1ecc6299db9ec823/half-2.2.0/src/vec.rs:
