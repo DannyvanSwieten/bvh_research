@@ -38,8 +38,18 @@ impl AABB {
         self.max = max(&self.max, &other.max);
     }
 
+    pub fn grow_with_position(&mut self, position: &Vec3) {
+        self.min = min(&self.min, position);
+        self.max = max(&self.max, position);
+    }
+
     pub fn extent(&self) -> Vec3 {
         self.max - self.min
+    }
+
+    pub fn area(&self) -> f32 {
+        let e = self.extent();
+        e.x * e.y + e.y * e.z + e.z * e.x
     }
 
     pub fn dominant_axis(&self) -> usize {
@@ -52,7 +62,7 @@ impl AABB {
             axis = 2;
         }
 
-        return axis;
+        axis
     }
 }
 

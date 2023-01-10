@@ -18,6 +18,12 @@ impl BruteForceStructure {
     }
 }
 
+impl Default for BruteForceStructure {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AccelerationStructure for BruteForceStructure {
     fn build(&mut self, vertices: &[Vertex], triangles: &[Triangle]) {
         self.vertices = vertices.to_vec();

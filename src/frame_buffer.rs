@@ -13,6 +13,12 @@ impl<P: Clone + std::ops::AddAssign> Framebuffer<P> {
         }
     }
 
+    pub fn clear(&mut self, p: P) {
+        for pixel in &mut self.pixels {
+            *pixel = p.clone()
+        }
+    }
+
     pub fn set_pixel(&mut self, x: usize, y: usize, pixel: P) {
         let idx = y * self.width + x;
         self.pixels[idx] = pixel;

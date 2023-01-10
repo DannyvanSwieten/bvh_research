@@ -8,13 +8,14 @@ pub mod intersect;
 pub mod trace;
 pub mod types;
 
-use std::time::Instant;
+use std::{io::BufRead, time::Instant};
 
 use image::ColorType;
 use rand::Rng;
 use types::{Triangle, Vertex};
 
 use crate::{
+    acc_bvh_midpoint_split::AccMidPointSplit,
     acceleration_structure::AccelerationStructure,
     brute_force::BruteForceStructure,
     camera::Camera,
@@ -22,6 +23,68 @@ use crate::{
     trace::{CpuTracer, Tracer},
     types::{HdrColor, Position},
 };
+
+fn read_triangle_file(name: &str) -> (Vec<Vertex>, Vec<Triangle>) {
+    let path = std::env::current_dir()
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_owned()
+        + "/assets/"
+        + name;
+    let file = std::fs::File::open(path).expect("Couldn't open file");
+    let reader = std::io::BufReader::new(file);
+    let positions = reader
+        .lines()
+        .into_iter()
+        .flat_map(|line| match line {
+            Ok(line) => {
+                let floats = line
+                    .split(' ')
+                    .into_iter()
+                    .map(|token| {
+                        let v: f32 = token.parse().expect("float parse failed");
+                        v
+                    })
+                    .collect::<Vec<f32>>();
+
+                floats.into_iter()
+            }
+
+            Err(_) => todo!(),
+        })
+        .collect::<Vec<f32>>();
+
+    let mut vertices = Vec::new();
+    let mut triangles = Vec::new();
+    for i in (0..positions.len()).step_by(9) {
+        vertices.push(Vertex::new(
+            positions[i],
+            positions[i + 1],
+            positions[i + 2],
+        ));
+        vertices.push(Vertex::new(
+            positions[i + 3],
+            positions[i + 4],
+            positions[i + 5],
+        ));
+        vertices.push(Vertex::new(
+            positions[i + 6],
+            positions[i + 7],
+            positions[i + 8],
+        ));
+    }
+
+    for i in (0..vertices.len()).step_by(3) {
+        triangles.push(Triangle {
+            v0: i as u32,
+            v1: i as u32 + 1,
+            v2: i as u32 + 2,
+        });
+    }
+
+    (vertices, triangles)
+}
 
 fn generate_random_vertices(count: usize) -> (Vec<Vertex>, Vec<Triangle>) {
     let mut rng = rand::thread_rng();
@@ -61,7 +124,7 @@ fn generate_random_vertices(count: usize) -> (Vec<Vertex>, Vec<Triangle>) {
     (vertices, triangles)
 }
 
-pub fn write_to_file(framebuffer: &Framebuffer<HdrColor>) {
+pub fn write_to_file(name: &str, framebuffer: &Framebuffer<HdrColor>) {
     let pixels: Vec<u8> = framebuffer
         .iter()
         .flat_map(|pixel| {
@@ -73,7 +136,7 @@ pub fn write_to_file(framebuffer: &Framebuffer<HdrColor>) {
         })
         .collect();
     image::save_buffer(
-        "output.png",
+        name,
         &pixels,
         framebuffer.width() as _,
         framebuffer.height() as _,
@@ -83,15 +146,27 @@ pub fn write_to_file(framebuffer: &Framebuffer<HdrColor>) {
 }
 
 fn main() {
-    let (vertices, triangles) = generate_random_vertices(64);
+    let (vertices, triangles) = read_triangle_file("unity.tri");
     let mut framebuffer = Framebuffer::new(640, 640, HdrColor::new(0.0, 0.0, 0.0, 0.0));
-    let camera = Camera::new(Position::new(0.0, 0.0, -18.0), -15.0);
+    let camera = Camera::new(Position::new(-4.5, -0.2, -5.5), 2.0);
     let tracer = CpuTracer {};
-    let mut acceleration_structure = BruteForceStructure::new();
-    acceleration_structure.build(&vertices, &triangles);
+
+    let mut brute_force_acc = BruteForceStructure::new();
+    brute_force_acc.build(&vertices, &triangles);
+
+    let mut midpoint_split_acc = AccMidPointSplit::new(true);
+    midpoint_split_acc.build(&vertices, &triangles);
+
     let now = Instant::now();
-    tracer.trace(&camera, &mut framebuffer, &acceleration_structure);
+    tracer.trace(&camera, &mut framebuffer, &brute_force_acc);
     let elapsed_time = now.elapsed();
     println!("Tracing took {} millis.", elapsed_time.as_millis());
-    write_to_file(&framebuffer);
+    write_to_file("brute_force.png", &framebuffer);
+
+    framebuffer.clear(HdrColor::new(0.0, 0.0, 0.0, 0.0));
+    let now = Instant::now();
+    tracer.trace(&camera, &mut framebuffer, &midpoint_split_acc);
+    let elapsed_time = now.elapsed();
+    println!("Tracing took {} millis.", elapsed_time.as_millis());
+    write_to_file("midpoint.png", &framebuffer);
 }

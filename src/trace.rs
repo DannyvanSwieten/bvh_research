@@ -27,7 +27,9 @@ impl Tracer for CpuTracer {
                 let ray = camera.ray(x, y, width, height);
                 let (_, t) = acceleration_structure.trace(&ray);
                 if t < f32::MAX {
-                    framebuffer.set_pixel(x, y, HdrColor::new(1.0, 1.0, 1.0, 1.0))
+                    let c = t / 7.0;
+                    let c = 1.0 - c;
+                    framebuffer.set_pixel(x, y, HdrColor::new(c, c, c, 1.0))
                 }
             }
         }
