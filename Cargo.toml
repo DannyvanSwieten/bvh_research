@@ -9,3 +9,6 @@ edition = "2021"
 cgmath="*"
 rand="*"
 image="*"
+
+[attributes]
+#![feature(portable_simd)]

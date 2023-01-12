@@ -1,3 +1,5 @@
+#![feature(portable_simd)]
+
 pub mod acc_bvh_midpoint_split;
 pub mod acceleration_structure;
 pub mod brute_force;
@@ -12,7 +14,7 @@ use std::{io::BufRead, time::Instant};
 
 use image::ColorType;
 use rand::Rng;
-use types::{Triangle, Vertex};
+use types::{vec3, Triangle, Vertex};
 
 use crate::{
     acc_bvh_midpoint_split::AccMidPointSplit,
@@ -58,21 +60,9 @@ fn read_triangle_file(name: &str) -> (Vec<Vertex>, Vec<Triangle>) {
     let mut vertices = Vec::new();
     let mut triangles = Vec::new();
     for i in (0..positions.len()).step_by(9) {
-        vertices.push(Vertex::new(
-            positions[i],
-            positions[i + 1],
-            positions[i + 2],
-        ));
-        vertices.push(Vertex::new(
-            positions[i + 3],
-            positions[i + 4],
-            positions[i + 5],
-        ));
-        vertices.push(Vertex::new(
-            positions[i + 6],
-            positions[i + 7],
-            positions[i + 8],
-        ));
+        vertices.push(vec3(positions[i], positions[i + 1], positions[i + 2]));
+        vertices.push(vec3(positions[i + 3], positions[i + 4], positions[i + 5]));
+        vertices.push(vec3(positions[i + 6], positions[i + 7], positions[i + 8]));
     }
 
     for i in (0..vertices.len()).step_by(3) {
@@ -103,9 +93,9 @@ fn generate_random_vertices(count: usize) -> (Vec<Vertex>, Vec<Triangle>) {
         let z1: f32 = rng.gen();
         let z2: f32 = rng.gen();
 
-        let v0 = Vertex::new(x0, y0, z0) * 9. - Vertex::new(5., 5., 5.);
-        let v1 = v0 + Vertex::new(x1, y1, z1);
-        let v2 = v0 + Vertex::new(x2, y2, z2);
+        let v0 = vec3(x0, y0, z0) * 9. - vec3(5., 5., 5.);
+        let v1 = v0 + vec3(x1, y1, z1);
+        let v2 = v0 + vec3(x2, y2, z2);
 
         vertices.push(v0);
         vertices.push(v1);

@@ -1,8 +1,51 @@
-use cgmath::Vector3;
-use cgmath::Vector4;
+use std::{
+    ops::{Add, Index},
+    simd::{Simd, SimdElement},
+};
+
+pub struct Vector3<T: std::simd::SimdElement> {
+    data: Simd<T, 4>,
+}
+
+impl<T: std::simd::SimdElement> From<T> for Vector3<T> {
+    fn from(value: T) -> Self {
+        Self {
+            data: Simd::from([value, value, value, value]),
+        }
+    }
+}
+
+impl<T: std::simd::SimdElement + Default> From<[T; 3]> for Vector3<T> {
+    fn from(value: [T; 3]) -> Self {
+        Self {
+            data: Simd::from([value[0], value[1], value[2], T::default()]),
+        }
+    }
+}
+
+impl<T: std::simd::SimdElement + Default> From<Simd<T, 4>> for Vector3<T> {
+    fn from(value: Simd<T, 4>) -> Self {
+        Self { data: value }
+    }
+}
+
+impl<T: std::simd::SimdElement> Index<usize> for Vector3<T> {
+    type Output = T;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.data[index]
+    }
+}
+
+impl<T: SimdElement> Add<Vector3<T>> for Vector3<T> {
+    type Output = Vector3<T>;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self::from(self.data + &rhs.data)
+    }
+}
 
 pub type Vec3 = Vector3<f32>;
-pub type Vec4 = Vector4<f32>;
 pub type Vertex = Vec3;
 pub type Position = Vec3;
 pub type Direction = Vec3;
@@ -21,11 +64,15 @@ pub struct AABB {
     pub max: Vec3,
 }
 
+pub fn vec3(x: f32, y: f32, z: f32) -> Vec3 {
+    Vec3::from([x, y, z])
+}
+
 pub fn min(lhs: &Vec3, rhs: &Vec3) -> Vec3 {
-    Vec3::new(lhs.x.min(rhs.x), lhs.y.min(rhs.y), lhs.z.min(rhs.z))
+    vec3(lhs[0].min(rhs[0]), lhs[1].min(rhs[1]), lhs[2].min(rhs[2]))
 }
 pub fn max(lhs: &Vec3, rhs: &Vec3) -> Vec3 {
-    Vec3::new(lhs.x.max(rhs.x), lhs.y.max(rhs.y), lhs.z.max(rhs.z))
+    vec3(lhs[0].max(rhs[0]), lhs[1].max(rhs[1]), lhs[2].max(rhs[2]))
 }
 
 impl AABB {
@@ -44,21 +91,21 @@ impl AABB {
     }
 
     pub fn extent(&self) -> Vec3 {
-        self.max - self.min
+        Vec3::from(self.max.data - self.min.data)
     }
 
     pub fn area(&self) -> f32 {
         let e = self.extent();
-        e.x * e.y + e.y * e.z + e.z * e.x
+        e[0] * e[1] + e[1] * e[2] + e[2] * e[0]
     }
 
     pub fn dominant_axis(&self) -> usize {
         let extent = self.extent();
         let mut axis = 0;
-        if extent.y > extent.x {
+        if extent[1] > extent[0] {
             axis = 1;
         }
-        if extent.z > extent[axis] {
+        if extent[2] > extent[axis] {
             axis = 2;
         }
 
@@ -69,8 +116,8 @@ impl AABB {
 impl Default for AABB {
     fn default() -> Self {
         Self {
-            min: Vec3::new(f32::MAX, f32::MAX, f32::MAX),
-            max: Vec3::new(f32::MIN, f32::MIN, f32::MIN),
+            min: vec3(f32::MAX, f32::MAX, f32::MAX),
+            max: vec3(f32::MIN, f32::MIN, f32::MIN),
         }
     }
 }
@@ -86,7 +133,7 @@ impl Ray {
         Self {
             origin,
             direction,
-            inv_direcion: 1.0 / direction,
+            inv_direcion: Vec3::from(1.0) / direction,
         }
     }
 }
