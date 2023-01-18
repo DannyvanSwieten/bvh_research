@@ -1,6 +1,8 @@
+use core::panic;
+
 use crate::{
     acceleration_structure::AccelerationStructure,
-    bvh::BVHMidPointSplit,
+    bvh::{BVHMidPointSplit, Node},
     types::{Ray, Triangle, Vertex},
 };
 
@@ -13,6 +15,18 @@ pub struct AccMidPointSplit {
 impl AccMidPointSplit {
     pub fn new(use_sah: bool) -> Self {
         Self { bvh: None, use_sah }
+    }
+
+    pub fn nodes(&self) -> &[Node] {
+        if let Some(bvh) = &self.bvh {
+            bvh.nodes()
+        } else {
+            panic!()
+        }
+    }
+
+    pub fn byte_size(&self) -> u64 {
+        std::mem::size_of::<Node>() as u64 * self.nodes().len() as u64
     }
 }
 

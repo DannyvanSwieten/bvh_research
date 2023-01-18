@@ -3,7 +3,7 @@ use crate::{
     types::{Ray, Triangle, Vec3, Vertex, AABB},
 };
 
-struct Node {
+pub struct Node {
     pub first_primitive: u32,
     pub primitive_count: u32,
     pub aabb: AABB,
@@ -60,6 +60,10 @@ impl BVHMidPointSplit {
         this.update_bounds(0);
         this.subdivide(0, &mut centroids);
         this
+    }
+
+    pub fn nodes(&self) -> &[Node] {
+        &self.nodes
     }
 
     fn update_bounds(&mut self, idx: usize) {
