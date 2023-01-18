@@ -14,8 +14,9 @@ use image::ColorType;
 use types::{Triangle, Vertex};
 use vk_utils::{
     buffer_resource::BufferResource, command_buffer::CommandBuffer,
-    pipeline_descriptor::ComputePipeline, queue::CommandQueue, vulkan::Vulkan, BufferUsageFlags,
-    MemoryPropertyFlags, QueueFlags,
+    image2d_resource::Image2DResource, pipeline_descriptor::ComputePipeline, queue::CommandQueue,
+    vulkan::Vulkan, BufferUsageFlags, Format, ImageLayout, ImageUsageFlags, MemoryPropertyFlags,
+    QueueFlags,
 };
 
 use crate::{
@@ -199,9 +200,20 @@ fn main() {
         index_buffer.upload(&vertices);
         pipeline.set_storage_buffer(0, 2, &index_buffer);
 
+        let mut image = Image2DResource::new(
+            logical_device.clone(),
+            640,
+            640,
+            Format::R8G8B8A8_UNORM,
+            ImageUsageFlags::STORAGE,
+            MemoryPropertyFlags::DEVICE_LOCAL,
+        );
+
         let queue = Rc::new(CommandQueue::new(logical_device, QueueFlags::COMPUTE));
         let mut command_buffer = CommandBuffer::new(queue);
         command_buffer.begin();
+        command_buffer.image_resource_transition(&mut image, ImageLayout::GENERAL);
+        pipeline.set_storage_image(0, 3, &image);
         command_buffer.bind_compute_pipeline(&pipeline);
         let now = Instant::now();
         command_buffer.dispatch_compute(640, 640, 1);
