@@ -16,7 +16,7 @@ pub fn intersect_aabb(aabb: &AABB, ray: &Ray, t_far: f32) -> f32 {
     let t_min = t_min.max(ty1.min(ty2));
     let t_max = t_max.min(ty1.max(ty2));
 
-    let t_min = t_min.max(tz1.min(tz1));
+    let t_min = t_min.max(tz1.min(tz2));
     let t_max = t_max.min(tz1.max(tz2));
 
     let hit = t_max >= t_min && t_min < t_far && t_max > 0.0;
