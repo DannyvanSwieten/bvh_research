@@ -126,14 +126,20 @@ fn main() {
     // let now = Instant::now();
     // tracer.trace(&camera, &mut framebuffer, &brute_force_acc);
     // let elapsed_time = now.elapsed();
-    // println!("Tracing took {} millis.", elapsed_time.as_millis());
+    // println!(
+    //     "Tracing brute force took {} millis.",
+    //     elapsed_time.as_millis()
+    // );
     // write_to_file("brute_force.png", &framebuffer);
 
     framebuffer.clear(HdrColor::new(0.0, 0.0, 0.0, 0.0));
     let now = Instant::now();
     tracer.trace(&camera, &mut framebuffer, &midpoint_split_acc);
     let elapsed_time = now.elapsed();
-    println!("Tracing took {} millis.", elapsed_time.as_millis());
+    println!(
+        "Tracing CPU SAH split took {} millis.",
+        elapsed_time.as_millis()
+    );
     write_to_file("midpoint.png", &framebuffer);
 
     let vulkan = Vulkan::new(
@@ -197,7 +203,13 @@ fn main() {
         let mut command_buffer = CommandBuffer::new(queue);
         command_buffer.begin();
         command_buffer.bind_compute_pipeline(&pipeline);
+        let now = Instant::now();
         command_buffer.dispatch_compute(640, 640, 1);
         command_buffer.submit().wait();
+        let elapsed_time = now.elapsed();
+        println!(
+            "Tracing GPU SAH split took {} millis.",
+            elapsed_time.as_millis()
+        );
     }
 }
