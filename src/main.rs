@@ -195,7 +195,7 @@ fn main() {
             logical_device.clone(),
             index_buffer_size as _,
             MemoryPropertyFlags::HOST_VISIBLE,
-            BufferUsageFlags::STORAGE_BUFFER,
+            BufferUsageFlags::STORAGE_BUFFER | BufferUsageFlags::TRANSFER_SRC,
         );
         index_buffer.upload(&vertices);
         pipeline.set_storage_buffer(0, 2, &index_buffer);
