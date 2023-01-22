@@ -1,31 +1,35 @@
-use cgmath::Vector3;
-use cgmath::Vector4;
+use cgmath::{Vector3, Vector4};
 
 pub type Vec3 = Vector3<f32>;
 pub type Vec4 = Vector4<f32>;
-pub type Vertex = Vec3;
+pub type Vertex = Vec4;
 pub type Position = Vec3;
 pub type Direction = Vec3;
 pub type Origin = Vec3;
 pub type HdrColor = Vec4;
 
+pub fn vec4_to_3(v: Vec4) -> Vec3 {
+    Vec3::new(v.x, v.y, v.z)
+}
+
 #[derive(Clone, Copy)]
+#[repr(align(16))]
 pub struct Triangle {
     pub v0: u32,
     pub v1: u32,
     pub v2: u32,
 }
-
+#[repr(C)]
 pub struct AABB {
     pub min: Vec3,
     pub max: Vec3,
 }
 
 pub fn min(lhs: &Vec3, rhs: &Vec3) -> Vec3 {
-    Vec3::new(lhs.x.min(rhs.x), lhs.y.min(rhs.y), lhs.z.min(rhs.z))
+    Vec3::new(lhs[0].min(rhs[0]), lhs[1].min(rhs[1]), lhs[2].min(rhs[2]))
 }
 pub fn max(lhs: &Vec3, rhs: &Vec3) -> Vec3 {
-    Vec3::new(lhs.x.max(rhs.x), lhs.y.max(rhs.y), lhs.z.max(rhs.z))
+    Vec3::new(lhs[0].max(rhs[0]), lhs[1].max(rhs[1]), lhs[2].max(rhs[2]))
 }
 
 impl AABB {
@@ -49,16 +53,16 @@ impl AABB {
 
     pub fn area(&self) -> f32 {
         let e = self.extent();
-        e.x * e.y + e.y * e.z + e.z * e.x
+        e[0] * e[1] + e[1] * e[2] + e[2] * e[0]
     }
 
     pub fn dominant_axis(&self) -> usize {
         let extent = self.extent();
         let mut axis = 0;
-        if extent.y > extent.x {
+        if extent[1] > extent[0] {
             axis = 1;
         }
-        if extent.z > extent[axis] {
+        if extent[2] > extent[axis] {
             axis = 2;
         }
 

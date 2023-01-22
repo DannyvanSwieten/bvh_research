@@ -67,16 +67,19 @@ fn read_triangle_file(name: &str) -> (Vec<Vertex>, Vec<Triangle>) {
             positions[i],
             positions[i + 1],
             positions[i + 2],
+            1.0,
         ));
         vertices.push(Vertex::new(
             positions[i + 3],
             positions[i + 4],
             positions[i + 5],
+            1.0,
         ));
         vertices.push(Vertex::new(
             positions[i + 6],
             positions[i + 7],
             positions[i + 8],
+            1.0,
         ));
     }
 
@@ -115,7 +118,7 @@ pub fn write_to_file(name: &str, framebuffer: &Framebuffer<HdrColor>) {
 fn main() {
     let (vertices, triangles) = read_triangle_file("unity.tri");
     let mut framebuffer = Framebuffer::new(640, 640, HdrColor::new(0.0, 0.0, 0.0, 0.0));
-    let camera = Camera::new(Position::new(-4.5, -0.2, -5.5), 2.0);
+    let camera = Camera::new(Position::new(-5.0, 0.0, -5.0), 2.0);
     let tracer = CpuTracer {};
 
     let mut brute_force_acc = BruteForceStructure::new();
@@ -190,14 +193,15 @@ fn main() {
         vertex_buffer.upload(&vertices);
         pipeline.set_storage_buffer(0, 1, &vertex_buffer);
 
-        let index_buffer_size = std::mem::size_of::<Triangle>() * triangles.len();
+        let index_buffer_size =
+            std::mem::size_of::<Triangle>() * midpoint_split_acc.triangles().len();
         let mut index_buffer = BufferResource::new(
             logical_device.clone(),
             index_buffer_size as _,
             MemoryPropertyFlags::HOST_VISIBLE,
-            BufferUsageFlags::STORAGE_BUFFER | BufferUsageFlags::TRANSFER_SRC,
+            BufferUsageFlags::STORAGE_BUFFER,
         );
-        index_buffer.upload(&vertices);
+        index_buffer.upload(&midpoint_split_acc.triangles());
         pipeline.set_storage_buffer(0, 2, &index_buffer);
 
         let mut image = Image2DResource::new(
@@ -205,12 +209,15 @@ fn main() {
             640,
             640,
             Format::R8G8B8A8_UNORM,
-            ImageUsageFlags::STORAGE,
+            ImageUsageFlags::STORAGE | ImageUsageFlags::TRANSFER_SRC,
             MemoryPropertyFlags::DEVICE_LOCAL,
         );
 
-        let queue = Rc::new(CommandQueue::new(logical_device, QueueFlags::COMPUTE));
-        let mut command_buffer = CommandBuffer::new(queue);
+        let queue = Rc::new(CommandQueue::new(
+            logical_device.clone(),
+            QueueFlags::COMPUTE,
+        ));
+        let mut command_buffer = CommandBuffer::new(queue.clone());
         command_buffer.begin();
         command_buffer.image_resource_transition(&mut image, ImageLayout::GENERAL);
         pipeline.set_storage_image(0, 3, &image);
@@ -223,5 +230,28 @@ fn main() {
             "Tracing GPU SAH split took {} millis.",
             elapsed_time.as_millis()
         );
+
+        let buffer_size = 4 * 640 * 640;
+        let mut image_buffer = BufferResource::new(
+            logical_device.clone(),
+            buffer_size,
+            MemoryPropertyFlags::HOST_VISIBLE,
+            BufferUsageFlags::TRANSFER_DST,
+        );
+        let mut command_buffer = CommandBuffer::new(queue);
+        command_buffer.begin();
+        command_buffer.image_resource_transition(&mut image, ImageLayout::TRANSFER_SRC_OPTIMAL);
+        command_buffer.copy_image_to_buffer(&image, &mut image_buffer);
+        command_buffer.submit().wait();
+        logical_device.wait();
+        let pixel_buffer = image_buffer.copy_data::<u8>();
+        image::save_buffer(
+            "midpoint_gpu.png",
+            &pixel_buffer,
+            640,
+            640,
+            image::ColorType::Rgba8,
+        )
+        .expect("Image write failed");
     }
 }

@@ -1,12 +1,12 @@
 use crate::{
     intersect::{intersect_aabb, intersect_triangle},
-    types::{Ray, Triangle, Vec3, Vertex, AABB},
+    types::{vec4_to_3, Ray, Triangle, Vec3, Vertex, AABB},
 };
-
+#[repr(C)]
 pub struct Node {
+    pub aabb: AABB,
     pub first_primitive: u32,
     pub primitive_count: u32,
-    pub aabb: AABB,
 }
 
 impl Default for Node {
@@ -43,10 +43,11 @@ impl BVHMidPointSplit {
         let mut centroids: Vec<Vec3> = triangles
             .iter()
             .map(|triangle| {
-                (vertices[triangle.v0 as usize]
+                let c = (vertices[triangle.v0 as usize]
                     + vertices[triangle.v1 as usize]
                     + vertices[triangle.v2 as usize])
-                    / 3.0
+                    / 3.0;
+                Vec3::new(c.x, c.y, c.z)
             })
             .collect();
 
@@ -66,6 +67,10 @@ impl BVHMidPointSplit {
         &self.nodes
     }
 
+    pub fn triangles(&self) -> &[Triangle] {
+        &self.triangles
+    }
+
     fn update_bounds(&mut self, idx: usize) {
         let mut node = &mut self.nodes[idx];
         let first = node.first_primitive as usize;
@@ -73,28 +78,28 @@ impl BVHMidPointSplit {
         for i in first..last as usize {
             node.aabb.min = crate::types::min(
                 &node.aabb.min,
-                &self.vertices[self.triangles[i].v0 as usize],
+                &vec4_to_3(self.vertices[self.triangles[i].v0 as usize]),
             );
             node.aabb.min = crate::types::min(
                 &node.aabb.min,
-                &self.vertices[self.triangles[i].v1 as usize],
+                &vec4_to_3(self.vertices[self.triangles[i].v1 as usize]),
             );
             node.aabb.min = crate::types::min(
                 &node.aabb.min,
-                &self.vertices[self.triangles[i].v2 as usize],
+                &vec4_to_3(self.vertices[self.triangles[i].v2 as usize]),
             );
 
             node.aabb.max = crate::types::max(
                 &node.aabb.max,
-                &self.vertices[self.triangles[i].v0 as usize],
+                &vec4_to_3(self.vertices[self.triangles[i].v0 as usize]),
             );
             node.aabb.max = crate::types::max(
                 &node.aabb.max,
-                &self.vertices[self.triangles[i].v1 as usize],
+                &vec4_to_3(self.vertices[self.triangles[i].v1 as usize]),
             );
             node.aabb.max = crate::types::max(
                 &node.aabb.max,
-                &self.vertices[self.triangles[i].v2 as usize],
+                &vec4_to_3(self.vertices[self.triangles[i].v2 as usize]),
             );
         }
     }
@@ -195,14 +200,14 @@ impl BVHMidPointSplit {
             let triangle = &self.triangles[i];
             if centroid[axis] < position {
                 left_count += 1;
-                left_box.grow_with_position(&self.vertices[triangle.v0 as usize]);
-                left_box.grow_with_position(&self.vertices[triangle.v1 as usize]);
-                left_box.grow_with_position(&self.vertices[triangle.v2 as usize]);
+                left_box.grow_with_position(&vec4_to_3(self.vertices[triangle.v0 as usize]));
+                left_box.grow_with_position(&vec4_to_3(self.vertices[triangle.v1 as usize]));
+                left_box.grow_with_position(&vec4_to_3(self.vertices[triangle.v2 as usize]));
             } else {
                 right_count += 1;
-                right_box.grow_with_position(&self.vertices[triangle.v0 as usize]);
-                right_box.grow_with_position(&self.vertices[triangle.v1 as usize]);
-                right_box.grow_with_position(&self.vertices[triangle.v2 as usize]);
+                right_box.grow_with_position(&vec4_to_3(self.vertices[triangle.v0 as usize]));
+                right_box.grow_with_position(&vec4_to_3(self.vertices[triangle.v1 as usize]));
+                right_box.grow_with_position(&vec4_to_3(self.vertices[triangle.v2 as usize]));
             }
         }
 
@@ -272,8 +277,8 @@ impl BVHMidPointSplit {
 
             let mut left_child_idx = node.first_primitive as usize;
             let mut right_child_idx = left_child_idx + 1;
-            let left_child = &self.nodes[node.first_primitive as usize];
-            let right_child = &self.nodes[node.first_primitive as usize + 1];
+            let left_child = &self.nodes[left_child_idx];
+            let right_child = &self.nodes[right_child_idx];
             let mut left_distance = intersect_aabb(&left_child.aabb, ray, f32::MAX);
             let mut right_distance = intersect_aabb(&right_child.aabb, ray, f32::MAX);
             if left_distance > right_distance {

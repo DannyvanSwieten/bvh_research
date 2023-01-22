@@ -25,6 +25,14 @@ impl AccMidPointSplit {
         }
     }
 
+    pub fn triangles(&self) -> &[Triangle] {
+        if let Some(bvh) = &self.bvh {
+            bvh.triangles()
+        } else {
+            panic!()
+        }
+    }
+
     pub fn byte_size(&self) -> u64 {
         std::mem::size_of::<Node>() as u64 * self.nodes().len() as u64
     }

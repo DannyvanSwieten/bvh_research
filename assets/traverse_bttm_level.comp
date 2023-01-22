@@ -1,14 +1,14 @@
-#version 450
-
-struct AABB{
-    vec3 min;
-    vec3 max;
-};
+#version 460
 
 struct Node{
+    float min_x;
+    float min_y;
+    float min_z;
+    float max_x;
+    float max_y;
+    float max_z;
     int first_primitive;
     int primitive_count;
-    AABB aabb;
 };
 
 struct Ray{
@@ -16,35 +16,41 @@ struct Ray{
     vec3 direction;
 };
 
-layout(set = 0, binding = 0) buffer BvhBuffer{
+layout(std430, set = 0, binding = 0) buffer BvhBuffer{
     Node nodes[];
 } bvh;
 
 layout(set = 0, binding = 1) buffer VertexBuffer{
-    vec3 vertices[];
+    vec4 vertices[];
 } Vertices;
 
 layout(set = 0, binding = 2) buffer IndexBuffer{
-    ivec3 indices[];
+    ivec4 indices[];
 } Triangles;
 
 layout(set = 0, binding = 3, rgba8) uniform image2D output_buffer;
 
-#define FLOAT_MAX 1000000
+#define FLOAT_MAX 10000000
 
-void swap(out int a, out int b){
+void swap_int(out int a, out int b){
     int tmp = a;
     a = b;
     b = tmp;
 }
 
-float intersect_aabb(AABB aabb, Ray ray, float t_far) {
-    float tx1 = (aabb.min.x - ray.origin.x) / ray.direction.x;
-    float tx2 = (aabb.max.x - ray.origin.x) / ray.direction.x;
-    float ty1 = (aabb.min.y - ray.origin.y) / ray.direction.y;
-    float ty2 = (aabb.max.y - ray.origin.y) / ray.direction.y;
-    float tz1 = (aabb.min.z - ray.origin.z) / ray.direction.z;
-    float tz2 = (aabb.max.z - ray.origin.z) / ray.direction.z;
+void swap_float(out float a, out float b){
+    float tmp = a;
+    a = b;
+    b = tmp;
+}
+
+float intersect_aabb(vec3 aabb_min, vec3 aabb_max, Ray ray, float t_far) {
+    float tx1 = (aabb_min.x - ray.origin.x) / ray.direction.x;
+    float tx2 = (aabb_max.x - ray.origin.x) / ray.direction.x;
+    float ty1 = (aabb_min.y - ray.origin.y) / ray.direction.y;
+    float ty2 = (aabb_max.y - ray.origin.y) / ray.direction.y;
+    float tz1 = (aabb_min.z - ray.origin.z) / ray.direction.z;
+    float tz2 = (aabb_max.z - ray.origin.z) / ray.direction.z;
 
     float t_min = min(tx1, tx2);
     float t_max = max(tx1, tx2);
@@ -105,13 +111,14 @@ float traverse(Ray ray)
         if (bvh.nodes[node_idx].primitive_count > 0) {
             int first = node.first_primitive;
             int last = first + node.primitive_count;
+            return 1.0;
             for (int p = first; p < last; ++p) {
-                ivec3 triangle = Triangles.indices[p];
+                ivec4 triangle = Triangles.indices[p];
                 float dl = intersect_triangle(
                     ray,
-                    Vertices.vertices[triangle.x ],
-                    Vertices.vertices[triangle.y ],
-                    Vertices.vertices[triangle.z ]
+                    Vertices.vertices[triangle.x ].xyz,
+                    Vertices.vertices[triangle.y ].xyz,
+                    Vertices.vertices[triangle.z ].xyz
                 );
 
                 if (dl < d) {
@@ -129,13 +136,13 @@ float traverse(Ray ray)
 
         int left_child_idx = node.first_primitive ;
         int right_child_idx = left_child_idx + 1;
-        Node left_child = bvh.nodes[node.first_primitive ];
-        Node right_child = bvh.nodes[node.first_primitive  + 1];
-        float left_distance = intersect_aabb(left_child.aabb, ray, FLOAT_MAX);
-        float right_distance = intersect_aabb(right_child.aabb, ray, FLOAT_MAX);
+        Node left_child = bvh.nodes[left_child_idx];
+        Node right_child = bvh.nodes[right_child_idx];
+        float left_distance = intersect_aabb(vec3(left_child.min_x, left_child.min_y, left_child.min_z), vec3(left_child.max_x, left_child.max_y, left_child.max_z), ray, FLOAT_MAX);
+        float right_distance = intersect_aabb( vec3(right_child.min_x, right_child.min_y, right_child.min_z), vec3(right_child.max_x, right_child.max_y, right_child.max_z), ray, FLOAT_MAX);
         if (left_distance > right_distance) {
-            swap(left_child_idx, right_child_idx);
-            swap(left_distance, right_distance);
+            swap_int(left_child_idx, right_child_idx);
+            swap_float(left_distance, right_distance);        
         }
         if (left_distance == FLOAT_MAX) {
             if (stack_ptr == 0) {
@@ -157,7 +164,7 @@ float traverse(Ray ray)
 }
 
 Ray create_ray(vec2 resolution, vec2 frag_location, vec3 origin, float z){
-    vec3 norm = vec3(frag_location / resolution, 0);
+    vec2 norm = frag_location / resolution;
     vec3 p0 = vec3(-1, 1, z);
     vec3 p1 = vec3(1, 1, z);
     vec3 p2 = vec3(-1, -1, z);
@@ -175,6 +182,11 @@ Ray create_ray(vec2 resolution, vec2 frag_location, vec3 origin, float z){
 }
 
 void main(){
-    Ray ray = create_ray(vec2(640, 640), vec2(gl_GlobalInvocationID.xy), vec3(0, 0, -3), -5);
+    if(gl_GlobalInvocationID.x > 639 || gl_GlobalInvocationID.y > 639)
+        return;
+        
+    Ray ray = create_ray(vec2(640, 640), vec2(gl_GlobalInvocationID.xy), vec3(-5, 0, -5), 2);
     float d = traverse(ray);
+    if(d < FLOAT_MAX)
+        imageStore(output_buffer, ivec2(gl_GlobalInvocationID.xy), vec4(1));
 }
