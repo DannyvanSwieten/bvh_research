@@ -116,8 +116,9 @@ impl BVHMidPointSplit {
             if min == max {
                 continue;
             }
-            let scale = extent[axis] / 12.0;
-            for i in 0..100 {
+            let bins = 8;
+            let scale = extent[axis] / bins as f32;
+            for i in 0..bins {
                 let candidate = min + i as f32 * scale;
                 let cost = self.evaluate_sah(node, centroids, axis, candidate);
                 if cost < best_cost {
