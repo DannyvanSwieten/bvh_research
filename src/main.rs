@@ -5,6 +5,7 @@ pub mod bvh;
 pub mod camera;
 pub mod frame_buffer;
 pub mod intersect;
+pub mod ray_generator;
 pub mod trace;
 pub mod types;
 
@@ -15,8 +16,8 @@ use types::{Triangle, Vertex};
 use vk_utils::{
     buffer_resource::BufferResource, command_buffer::CommandBuffer,
     image2d_resource::Image2DResource, pipeline_descriptor::ComputePipeline, queue::CommandQueue,
-    vulkan::Vulkan, BufferUsageFlags, Format, ImageLayout, ImageUsageFlags, MemoryPropertyFlags,
-    QueueFlags,
+    vulkan::Vulkan, BufferUsageFlags, DebugUtils, Format, ImageLayout, ImageUsageFlags,
+    MemoryPropertyFlags, QueueFlags,
 };
 
 use crate::{
@@ -94,7 +95,7 @@ fn read_triangle_file(name: &str) -> (Vec<Vertex>, Vec<Triangle>) {
     (vertices, triangles)
 }
 
-pub fn write_to_file(name: &str, framebuffer: &Framebuffer<HdrColor>) {
+pub fn write_framebuffer_to_file(name: &str, framebuffer: &Framebuffer<HdrColor>) {
     let pixels: Vec<u8> = framebuffer
         .iter()
         .flat_map(|pixel| {
@@ -118,7 +119,7 @@ pub fn write_to_file(name: &str, framebuffer: &Framebuffer<HdrColor>) {
 fn main() {
     let (vertices, triangles) = read_triangle_file("unity.tri");
     let mut framebuffer = Framebuffer::new(640, 640, HdrColor::new(0.0, 0.0, 0.0, 0.0));
-    let camera = Camera::new(Position::new(-5.0, 0.0, -5.0), 2.0);
+    let camera = Camera::new(Position::new(-5.0, 0.0, -15.0), 2.0);
     let tracer = CpuTracer {};
 
     let mut brute_force_acc = BruteForceStructure::new();
@@ -134,7 +135,7 @@ fn main() {
     //     "Tracing brute force took {} millis.",
     //     elapsed_time.as_millis()
     // );
-    // write_to_file("brute_force.png", &framebuffer);
+    // write_framebuffer_to_file("brute_force.png", &framebuffer);
 
     framebuffer.clear(HdrColor::new(0.0, 0.0, 0.0, 0.0));
     let now = Instant::now();
@@ -144,20 +145,20 @@ fn main() {
         "Tracing CPU SAH split took {} millis.",
         elapsed_time.as_millis()
     );
-    write_to_file("midpoint.png", &framebuffer);
+    write_framebuffer_to_file("midpoint.png", &framebuffer);
 
     let vulkan = Vulkan::new(
         "My Application",
-        &["VK_LAYER_KHRONOS_validation"],
-        &["VK_EXT_debug_utils"],
+        &[],
+        &[DebugUtils::name().to_str().unwrap()],
     );
 
     let physical_devices = vulkan.physical_devices();
-    let graphics_device_index = physical_devices
+    let graphics_compute_index = physical_devices
         .iter()
         .position(|device| device.supports_compute());
 
-    let logical_device = if let Some(index) = graphics_device_index {
+    let logical_device = if let Some(index) = graphics_compute_index {
         physical_devices[index].device_context(&[])
     } else {
         panic!()
@@ -243,7 +244,6 @@ fn main() {
         command_buffer.image_resource_transition(&mut image, ImageLayout::TRANSFER_SRC_OPTIMAL);
         command_buffer.copy_image_to_buffer(&image, &mut image_buffer);
         command_buffer.submit().wait();
-        logical_device.wait();
         let pixel_buffer = image_buffer.copy_data::<u8>();
         image::save_buffer(
             "midpoint_gpu.png",

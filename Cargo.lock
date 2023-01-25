@@ -62,9 +62,9 @@ dependencies = [
 
 [[package]]
 name = "bytemuck"
-version = "1.12.3"
+version = "1.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aaa3a8d9a1ca92e282c96a32d6511b695d7d994d1d102ba85d279f9b2756947f"
+checksum = "c041d3eab048880cb0b86b256447da3f18859a163c3b8d8893f4e6368abe6393"
 
 [[package]]
 name = "byteorder"
@@ -513,9 +513,9 @@ dependencies = [
 
 [[package]]
 name = "rayon-core"
-version = "1.10.1"
+version = "1.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cac410af5d00ab6884528b4ab69d1e8e146e8d471201800fa1b4524126de6ad3"
+checksum = "356a0625f1954f730c0201cdab48611198dc6ce21f4acff55089b5a78e6e835b"
 dependencies = [
  "crossbeam-channel",
  "crossbeam-deque",
@@ -563,9 +563,9 @@ dependencies = [
 
 [[package]]
 name = "shaderc"
-version = "0.8.1"
+version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77a410ea26a220ceaef964dd71054ccd63cc97fd54393014c09046e795127824"
+checksum = "31cef52787a0db5108788ea20bed13d6bf4b96287c5c5201e55725f7070f3443"
 dependencies = [
  "libc",
  "shaderc-sys",
@@ -573,9 +573,9 @@ dependencies = [
 
 [[package]]
 name = "shaderc-sys"
-version = "0.8.1"
+version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a281c39df7d8a0a97e9430409abb466ff4bd046875c4d97591935042bbffc898"
+checksum = "1e8f8439fffcffd6efcd74197204addf935dbab5752696bd990a6cd36d54cf64"
 dependencies = [
  "cmake",
  "libc",
@@ -661,7 +661,7 @@ checksum = "84a22b9f218b40614adcb3f4ff08b703773ad44fa9423e4e0d346d5db86e4ebc"
 [[package]]
 name = "vk_utils"
 version = "0.1.0"
-source = "git+https://github.com/DannyvanSwieten/vk_utils.git#116bf93b841d42c21714634fd83ff19f09f2678f"
+source = "git+https://github.com/DannyvanSwieten/vk_utils.git#24d6da8abef01432c97fa2787adbf49eb90148dd"
 dependencies = [
  "ash",
  "byteorder",
