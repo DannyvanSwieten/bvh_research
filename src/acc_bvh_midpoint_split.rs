@@ -3,7 +3,7 @@ use core::panic;
 use crate::{
     bottom_level_acceleration_structure::AccelerationStructure,
     bvh::{BVHMidPointSplit, Node},
-    types::{Mat4, Ray, Triangle, Vertex},
+    types::{HitRecord, Mat4, Ray, Triangle, Vertex},
 };
 
 pub struct AccMidPointSplit {
@@ -40,9 +40,9 @@ impl AccMidPointSplit {
 }
 
 impl AccelerationStructure for AccMidPointSplit {
-    fn trace(&self, ray: &Ray, transform: &Mat4) -> (i32, f32) {
+    fn trace(&self, ray: &Ray, transform: &Mat4, record: &mut HitRecord) {
         let bvh = self.bvh.as_ref().unwrap();
-        (0, bvh.traverse_stack(ray, transform))
+        bvh.traverse_stack(ray, transform, record);
     }
 
     fn aabb(&self) -> &crate::types::AABB {

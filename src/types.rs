@@ -1,4 +1,4 @@
-use cgmath::{InnerSpace, Matrix4, Vector3, Vector4};
+use cgmath::{InnerSpace, Matrix4, SquareMatrix, Vector3, Vector4};
 
 pub type Vec3 = Vector3<f32>;
 pub type Vec4 = Vector4<f32>;
@@ -93,6 +93,7 @@ impl Default for AABB {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct Ray {
     pub origin: Origin,
     pub direction: Direction,
@@ -100,6 +101,14 @@ pub struct Ray {
 }
 
 impl Ray {
+    pub fn default() -> Self {
+        Self {
+            origin: Origin::new(0.0, 0.0, 0.0),
+            direction: Direction::new(1.0, 1.0, 1.0),
+            inv_direcion: Direction::new(1.0, 1.0, 1.0),
+        }
+    }
+
     pub fn new(origin: Position, direction: Direction) -> Ray {
         Self {
             origin,
@@ -112,5 +121,35 @@ impl Ray {
         let o = transform * Vec4::new(self.origin.x, self.origin.y, self.origin.z, 1.0);
         let d = transform * Vec4::new(self.direction.x, self.direction.y, self.direction.z, 0.0);
         Self::new(o.truncate(), d.truncate().normalize())
+    }
+}
+
+pub struct HitRecord {
+    pub t: f32,
+    pub u: f32,
+    pub v: f32,
+    pub ray: Ray,
+    pub object_id: u32,
+    pub primitive_id: u32,
+    pub obj_to_world: Mat4,
+}
+
+impl HitRecord {
+    pub fn new() -> Self {
+        Self {
+            t: f32::MAX,
+            u: 0.0,
+            v: 0.0,
+            ray: Ray::default(),
+            object_id: 0,
+            primitive_id: 0,
+            obj_to_world: Mat4::identity(),
+        }
+    }
+}
+
+impl Default for HitRecord {
+    fn default() -> Self {
+        Self::new()
     }
 }

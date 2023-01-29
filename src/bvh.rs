@@ -1,8 +1,8 @@
-use cgmath::{SquareMatrix, Transform};
+use cgmath::SquareMatrix;
 
 use crate::{
     intersect::{intersect_aabb, intersect_triangle},
-    types::{vec4_to_3, Mat4, Ray, Triangle, Vec3, Vertex, AABB},
+    types::{vec4_to_3, HitRecord, Mat4, Ray, Triangle, Vec3, Vertex, AABB},
 };
 #[repr(C)]
 pub struct Node {
@@ -222,52 +222,37 @@ impl BVHMidPointSplit {
         }
     }
 
-    fn traverse_node_recursive(&self, idx: usize, ray: &Ray) {
-        let node = &self.nodes[idx];
-        let hit = intersect_aabb(&node.aabb, ray, f32::MAX) < f32::MAX;
-        if hit {
-            if node.primitive_count > 0 {
-                let first = node.first_primitive as usize;
-                let last = first + node.primitive_count as usize;
-                for p in &self.triangles[first..last] {
-                    intersect_triangle(
-                        ray,
-                        &self.vertices[p.v0 as usize],
-                        &self.vertices[p.v1 as usize],
-                        &self.vertices[p.v2 as usize],
-                    );
-                }
-            } else {
-                self.traverse_node_recursive(node.first_primitive as usize, ray);
-                self.traverse_node_recursive(node.first_primitive as usize + 1, ray);
-            }
-        }
-    }
-
-    pub fn traverse_recursive(&self, ray: &Ray) {
-        self.traverse_node_recursive(0, ray)
-    }
-
-    pub fn traverse_stack(&self, ray: &Ray, transform: &Mat4) -> f32 {
+    pub fn traverse_stack(&self, ray: &Ray, transform: &Mat4, hit_record: &mut HitRecord) {
         let mut node_idx = 0;
         let mut stack_ptr = 0;
         let mut stack = [0; 64];
-        let mut d = f32::MAX;
         let inv_ray = ray.transformed(&transform.invert().unwrap());
+        let mut d = f32::MAX;
         loop {
             let node = &self.nodes[node_idx];
             if self.nodes[node_idx].primitive_count > 0 {
                 let first = node.first_primitive as usize;
                 let last = first + node.primitive_count as usize;
-                for p in &self.triangles[first..last] {
-                    let distance = intersect_triangle(
+                for (index, p) in self.triangles[first..last].iter().enumerate() {
+                    let mut t = 0.0;
+                    let mut u = 0.0;
+                    let mut v = 0.0;
+                    let hit = intersect_triangle(
                         &inv_ray,
                         &self.vertices[p.v0 as usize],
                         &self.vertices[p.v1 as usize],
                         &self.vertices[p.v2 as usize],
+                        &mut t,
+                        &mut u,
+                        &mut v,
                     );
-                    if distance < d {
-                        d = distance;
+                    if hit && t < d {
+                        d = t;
+                        hit_record.t = t;
+                        hit_record.u = u;
+                        hit_record.v = v;
+                        hit_record.primitive_id = index as _;
+                        hit_record.ray = *ray;
                     }
                 }
                 if stack_ptr == 0 {
@@ -285,7 +270,7 @@ impl BVHMidPointSplit {
             let right_child = &self.nodes[right_child_idx];
             let mut left_distance = intersect_aabb(&left_child.aabb, &inv_ray, f32::MAX);
             let mut right_distance = intersect_aabb(&right_child.aabb, &inv_ray, f32::MAX);
-            if left_distance > d || right_distance > d {
+            if left_distance > hit_record.t || right_distance > hit_record.t {
                 if stack_ptr == 0 {
                     break;
                 } else {
@@ -313,7 +298,5 @@ impl BVHMidPointSplit {
                 }
             }
         }
-
-        d
     }
 }

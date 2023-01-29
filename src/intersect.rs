@@ -27,32 +27,36 @@ pub fn intersect_aabb(aabb: &AABB, ray: &Ray, t_far: f32) -> f32 {
     }
 }
 
-pub fn intersect_triangle(ray: &Ray, v0: &Vertex, v1: &Vertex, v2: &Vertex) -> f32 {
+pub fn intersect_triangle(
+    ray: &Ray,
+    v0: &Vertex,
+    v1: &Vertex,
+    v2: &Vertex,
+    t: &mut f32,
+    u: &mut f32,
+    v: &mut f32,
+) -> bool {
     let edge1 = vec4_to_3(*v1) - vec4_to_3(*v0);
     let edge2 = vec4_to_3(*v2) - vec4_to_3(*v0);
     let h = ray.direction.cross(edge2);
     let a = edge1.dot(h);
     if a > -0.0001 && a < 0.0001 {
         // Ray is parallel to the triangle
-        return f32::MAX;
+        return false;
     }
 
     let f = 1.0 / a;
     let s = ray.origin - vec4_to_3(*v0);
-    let u = f * s.dot(h);
-    if !(0.0..=1.0).contains(&u) {
-        return f32::MAX;
+    *u = f * s.dot(h);
+    if !(0.0..=1.0).contains(u) {
+        return false;
     }
     let q = s.cross(edge1);
-    let v = f * ray.direction.dot(q);
-    if v < 0.0 || u + v > 1.0 {
-        return f32::MAX;
+    *v = f * ray.direction.dot(q);
+    if *v < 0.0 || *u + *v > 1.0 {
+        return false;
     }
 
-    let t = f * edge2.dot(q);
-    if t < 0.000001 {
-        return f32::MAX;
-    }
-
-    t
+    *t = f * edge2.dot(q);
+    *t > 0.000001
 }

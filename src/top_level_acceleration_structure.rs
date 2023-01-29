@@ -5,7 +5,7 @@ use cgmath::Matrix4;
 use crate::{
     bottom_level_acceleration_structure::AccelerationStructure,
     intersect::intersect_aabb,
-    types::{Ray, AABB},
+    types::{HitRecord, Ray, AABB},
 };
 
 pub struct TlasNode {
@@ -65,7 +65,7 @@ impl TopLevelAccelerationStructure {
         self.nodes[idx].aabb = aabb;
     }
 
-    fn subdivide(&mut self, idx: usize, indices: &mut [u32], boxes: &mut [AABB]) {
+    fn subdivide(&mut self, idx: usize, boxes: &mut [AABB]) {
         let node = &self.nodes[idx];
 
         let extent = node.aabb.extent();
@@ -78,7 +78,6 @@ impl TopLevelAccelerationStructure {
             if boxes[i as usize].centroid()[axis] < split {
                 i += 1;
             } else {
-                indices.swap(i as usize, j as usize);
                 boxes.swap(i as usize, j as usize);
                 self.instances.swap(i as usize, j as usize);
                 j -= 1;
@@ -104,17 +103,15 @@ impl TopLevelAccelerationStructure {
 
         self.update_bounds(left_child_index, boxes);
         self.update_bounds(right_child_index, boxes);
-        self.subdivide(left_child_index, indices, boxes);
-        self.subdivide(right_child_index, indices, boxes);
+        self.subdivide(left_child_index, boxes);
+        self.subdivide(right_child_index, boxes);
     }
 
     pub fn new(instances: &[Instance]) -> Self {
         let mut nodes = vec![TlasNode::new()];
-        let mut indices = vec![0];
         let mut boxes = vec![AABB::default()];
-        for (i, instance) in instances.iter().enumerate() {
+        for instance in instances {
             nodes.push(TlasNode::new());
-            indices.push(i as u32);
             boxes.push(instance.blas.aabb().transformed(&instance.transform))
         }
 
@@ -125,21 +122,20 @@ impl TopLevelAccelerationStructure {
             instances: instances.to_vec(),
         };
         this.update_bounds(0, &mut boxes);
-        this.subdivide(0, &mut indices, &mut boxes);
+        this.subdivide(0, &mut boxes);
         this
     }
 
-    pub fn traverse(&self, ray: &Ray) -> f32 {
-        let (first, t) = self.traverse_stack(ray);
-        t
+    pub fn traverse(&self, ray: &Ray) -> HitRecord {
+        self.traverse_stack(ray)
     }
 
-    fn traverse_stack(&self, ray: &Ray) -> (u32, f32) {
+    fn traverse_stack(&self, ray: &Ray) -> HitRecord {
         let mut node_idx = 0;
         let mut stack_ptr = 0;
         let mut stack = [0; 64];
+        let mut record = HitRecord::new();
         let mut d = f32::MAX;
-        let mut id = 0;
         loop {
             let node = &self.nodes[node_idx];
             if self.nodes[node_idx].primitive_count > 0 {
@@ -149,10 +145,10 @@ impl TopLevelAccelerationStructure {
                 for i in first..last {
                     let instance = &self.instances[i];
                     let transform = &instance.transform;
-                    let (index, distance) = instance.blas.trace(ray, transform);
-                    if distance < d {
-                        d = distance;
-                        id = index;
+                    instance.blas.trace(ray, transform, &mut record);
+                    if record.t < d {
+                        record.object_id = i as _;
+                        d = record.t;
                     }
                 }
                 if stack_ptr == 0 {
@@ -199,6 +195,6 @@ impl TopLevelAccelerationStructure {
             }
         }
 
-        (id as u32, d)
+        record
     }
 }

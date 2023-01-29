@@ -1,6 +1,6 @@
-use crate::types::{Mat4, Ray, AABB};
+use crate::types::{HitRecord, Mat4, Ray, AABB};
 
 pub trait AccelerationStructure {
-    fn trace(&self, ray: &Ray, transform: &Mat4) -> (i32, f32);
+    fn trace(&self, ray: &Ray, transform: &Mat4, record: &mut HitRecord);
     fn aabb(&self) -> &AABB;
 }

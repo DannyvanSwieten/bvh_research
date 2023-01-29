@@ -124,7 +124,7 @@ fn main() {
     let camera = Camera::new(Position::new(-5.0, 0.0, -15.0), 2.0);
     let tracer = CpuTracer {};
 
-    let brute_force_acc = Rc::new(BruteForceStructure::new(&vertices, &triangles));
+    let _brute_force_acc = Rc::new(BruteForceStructure::new(&vertices, &triangles));
     let midpoint_split_acc = Rc::new(AccMidPointSplit::new(&vertices, &triangles, true));
 
     let instances = [
