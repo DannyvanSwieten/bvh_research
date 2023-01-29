@@ -1,6 +1,8 @@
+use cgmath::{SquareMatrix, Transform};
+
 use crate::{
     intersect::{intersect_aabb, intersect_triangle},
-    types::{vec4_to_3, Ray, Triangle, Vec3, Vertex, AABB},
+    types::{vec4_to_3, Mat4, Ray, Triangle, Vec3, Vertex, AABB},
 };
 #[repr(C)]
 pub struct Node {
@@ -246,11 +248,12 @@ impl BVHMidPointSplit {
         self.traverse_node_recursive(0, ray)
     }
 
-    pub fn traverse_stack(&self, ray: &Ray) -> f32 {
+    pub fn traverse_stack(&self, ray: &Ray, transform: &Mat4) -> f32 {
         let mut node_idx = 0;
         let mut stack_ptr = 0;
         let mut stack = [0; 64];
         let mut d = f32::MAX;
+        let inv_ray = ray.transformed(&transform.invert().unwrap());
         loop {
             let node = &self.nodes[node_idx];
             if self.nodes[node_idx].primitive_count > 0 {
@@ -258,7 +261,7 @@ impl BVHMidPointSplit {
                 let last = first + node.primitive_count as usize;
                 for p in &self.triangles[first..last] {
                     let distance = intersect_triangle(
-                        ray,
+                        &inv_ray,
                         &self.vertices[p.v0 as usize],
                         &self.vertices[p.v1 as usize],
                         &self.vertices[p.v2 as usize],
@@ -280,8 +283,17 @@ impl BVHMidPointSplit {
             let mut right_child_idx = left_child_idx + 1;
             let left_child = &self.nodes[left_child_idx];
             let right_child = &self.nodes[right_child_idx];
-            let mut left_distance = intersect_aabb(&left_child.aabb, ray, f32::MAX);
-            let mut right_distance = intersect_aabb(&right_child.aabb, ray, f32::MAX);
+            let mut left_distance = intersect_aabb(&left_child.aabb, &inv_ray, f32::MAX);
+            let mut right_distance = intersect_aabb(&right_child.aabb, &inv_ray, f32::MAX);
+            if left_distance > d || right_distance > d {
+                if stack_ptr == 0 {
+                    break;
+                } else {
+                    stack_ptr -= 1;
+                    node_idx = stack[stack_ptr];
+                    continue;
+                }
+            }
             if left_distance > right_distance {
                 std::mem::swap(&mut left_child_idx, &mut right_child_idx);
                 std::mem::swap(&mut left_distance, &mut right_distance);

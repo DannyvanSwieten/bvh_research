@@ -1,4 +1,4 @@
-use cgmath::{Vector3, Vector4};
+use cgmath::{InnerSpace, Matrix4, Vector3, Vector4};
 
 pub type Vec3 = Vector3<f32>;
 pub type Vec4 = Vector4<f32>;
@@ -7,6 +7,7 @@ pub type Position = Vec3;
 pub type Direction = Vec3;
 pub type Origin = Vec3;
 pub type HdrColor = Vec4;
+pub type Mat4 = Matrix4<f32>;
 
 pub fn vec4_to_3(v: Vec4) -> Vec3 {
     Vec3::new(v.x, v.y, v.z)
@@ -68,6 +69,19 @@ impl AABB {
 
         axis
     }
+
+    pub fn centroid(&self) -> Vec3 {
+        self.extent() * 0.5
+    }
+
+    pub fn transformed(&self, transform: &Mat4) -> Self {
+        let min = transform * Vec4::new(self.min.x, self.min.y, self.min.z, 1.0);
+        let max = transform * Vec4::new(self.max.x, self.max.y, self.max.z, 1.0);
+        Self {
+            min: min.truncate(),
+            max: max.truncate(),
+        }
+    }
 }
 
 impl Default for AABB {
@@ -92,5 +106,11 @@ impl Ray {
             direction,
             inv_direcion: 1.0 / direction,
         }
+    }
+
+    pub fn transformed(&self, transform: &Mat4) -> Self {
+        let o = transform * Vec4::new(self.origin.x, self.origin.y, self.origin.z, 1.0);
+        let d = transform * Vec4::new(self.direction.x, self.direction.y, self.direction.z, 0.0);
+        Self::new(o.truncate(), d.truncate().normalize())
     }
 }

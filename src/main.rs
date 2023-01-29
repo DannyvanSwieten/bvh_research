@@ -1,16 +1,18 @@
 pub mod acc_bvh_midpoint_split;
-pub mod acceleration_structure;
+pub mod bottom_level_acceleration_structure;
 pub mod brute_force;
 pub mod bvh;
 pub mod camera;
 pub mod frame_buffer;
 pub mod intersect;
 pub mod ray_generator;
+pub mod top_level_acceleration_structure;
 pub mod trace;
 pub mod types;
 
 use std::{io::BufRead, rc::Rc, time::Instant};
 
+use cgmath::{Matrix4, SquareMatrix};
 use image::ColorType;
 use types::{Triangle, Vertex};
 use vk_utils::{
@@ -22,12 +24,12 @@ use vk_utils::{
 
 use crate::{
     acc_bvh_midpoint_split::AccMidPointSplit,
-    acceleration_structure::AccelerationStructure,
     brute_force::BruteForceStructure,
     camera::Camera,
     frame_buffer::Framebuffer,
+    top_level_acceleration_structure::{Instance, TopLevelAccelerationStructure},
     trace::{CpuTracer, Tracer},
-    types::{HdrColor, Position},
+    types::{HdrColor, Position, Vec3},
 };
 
 fn read_triangle_file(name: &str) -> (Vec<Vertex>, Vec<Triangle>) {
@@ -122,11 +124,23 @@ fn main() {
     let camera = Camera::new(Position::new(-5.0, 0.0, -15.0), 2.0);
     let tracer = CpuTracer {};
 
-    let mut brute_force_acc = BruteForceStructure::new();
-    brute_force_acc.build(&vertices, &triangles);
+    let brute_force_acc = Rc::new(BruteForceStructure::new(&vertices, &triangles));
+    let midpoint_split_acc = Rc::new(AccMidPointSplit::new(&vertices, &triangles, true));
 
-    let mut midpoint_split_acc = AccMidPointSplit::new(true);
-    midpoint_split_acc.build(&vertices, &triangles);
+    let instances = [
+        Instance::new(
+            midpoint_split_acc.clone(),
+            0,
+            Matrix4::<f32>::from_scale(1.0),
+        ),
+        Instance::new(
+            midpoint_split_acc.clone(),
+            2,
+            Matrix4::<f32>::from_translation(Vec3::new(1.0, 1.0, 0.0)),
+        ),
+    ];
+
+    let tlas = TopLevelAccelerationStructure::new(&instances);
 
     // let now = Instant::now();
     // tracer.trace(&camera, &mut framebuffer, &brute_force_acc);
@@ -139,7 +153,7 @@ fn main() {
 
     framebuffer.clear(HdrColor::new(0.0, 0.0, 0.0, 0.0));
     let now = Instant::now();
-    tracer.trace(&camera, &mut framebuffer, &midpoint_split_acc);
+    tracer.trace(&camera, &mut framebuffer, &tlas);
     let elapsed_time = now.elapsed();
     println!(
         "Tracing CPU SAH split took {} millis.",
@@ -254,4 +268,5 @@ fn main() {
         )
         .expect("Image write failed");
     }
+    print!("{}", 0);
 }

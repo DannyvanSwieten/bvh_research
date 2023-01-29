@@ -1,0 +1,22 @@
+#version 460
+
+struct Ray
+{
+    vec4 origin;
+    vec4 direction;
+    vec4 color;
+};
+
+layout(std430, set = 0, binding = 0) buffer RayBuffer {
+    Ray data[];
+} Rays;
+
+layout( push_constant ) uniform constants {
+    mat4 inverse_view;
+    mat4 inverse_projection;
+} CameraConstants;
+
+void main()
+{
+
+}

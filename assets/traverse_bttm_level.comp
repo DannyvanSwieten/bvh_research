@@ -1,4 +1,5 @@
 #version 450
+#extension GL_EXT_nonuniform_qualifier: require
 
 struct Node{
     float min_x;
@@ -19,7 +20,7 @@ struct Ray{
 
 layout(std430, set = 0, binding = 0) buffer BvhBuffer{
     Node nodes[];
-} bvh;
+} bvh[];
 
 layout(std430, set = 0, binding = 1) buffer VertexBuffer{
     vec3 vertices[];
@@ -45,35 +46,30 @@ void swap_float(inout float a, inout float b){
     b = tmp;
 }
 
+float max_element(vec3 v){
+    return max(v.x, max(v.y, v.z));
+}
+
+float min_element(vec3 v){
+    return min(v.x, min(v.y, v.z));
+}
+
 float intersect_aabb(vec3 aabb_min, vec3 aabb_max, Ray ray, float t_far) {
-    float tx1 = (aabb_min.x - ray.origin.x) * ray.invDirection.x;
-    float tx2 = (aabb_max.x - ray.origin.x) * ray.invDirection.x;
-    float ty1 = (aabb_min.y - ray.origin.y) * ray.invDirection.y;
-    float ty2 = (aabb_max.y - ray.origin.y) * ray.invDirection.y;
-    float tz1 = (aabb_min.z - ray.origin.z) * ray.invDirection.z;
-    float tz2 = (aabb_max.z - ray.origin.z) * ray.invDirection.z;
 
-    float tx_min = min(tx1, tx2);
-    float tx_max = max(tx1, tx2);
+    vec3 t_min = (aabb_min - ray.origin) * ray.invDirection;
+    vec3 t_max = (aabb_max - ray.origin) * ray.invDirection;
 
-    float ty_min = min(ty1, ty2);
-    float ty_max = max(ty1, ty2);
+    vec3 t1 = min(t_min, t_max);
+    vec3 t2 = max(t_min, t_max);
 
-    float tz_min = min(tz1, tz2);
-    float tz_max = max(tz1, tz2);
+    float t_near = max_element(t1);
+    float t_f = min_element(t2);
 
-    float t_min = max(tx_min, ty_min);
-    float t_max = min(tx_max, ty_max);
-
-    t_min = max(t_min, tz_min);
-    t_max = min(t_max, tz_max);
-
-    bool hit = t_max >= t_min && t_min < t_far && t_max > 0.0;
-    if (hit) {
-        return min(t_min, t_max);
-    } else {
+    bool h = t_f > t_near && t_near < t_far && t_f > 0.0;
+    if(h)
+        return min(t_f, t_near);
+    else
         return t_far;
-    }
 }
 
 float intersect_triangle(Ray ray, vec3 v0, vec3 v1, vec3 v2)
@@ -115,8 +111,8 @@ float traverse(Ray ray)
     uint stack[64];
     float d = FLOAT_MAX;
     while(true) {
-        Node node = bvh.nodes[node_idx];
-        if (bvh.nodes[node_idx].primitive_count > 0) {
+        Node node = bvh[0].nodes[node_idx];
+        if (bvh[0].nodes[node_idx].primitive_count > 0) {
             uint first = node.first_primitive;
             uint last = first + node.primitive_count;
             for (uint p = first; p < last; ++p) {
@@ -143,10 +139,19 @@ float traverse(Ray ray)
 
         uint left_child_idx = node.first_primitive ;
         uint right_child_idx = left_child_idx + 1;
-        Node left_child = bvh.nodes[left_child_idx];
-        Node right_child = bvh.nodes[right_child_idx];
+        Node left_child = bvh[0].nodes[left_child_idx];
+        Node right_child = bvh[0].nodes[right_child_idx];
         float left_distance = intersect_aabb(vec3(left_child.min_x, left_child.min_y, left_child.min_z), vec3(left_child.max_x, left_child.max_y, left_child.max_z), ray, FLOAT_MAX);
         float right_distance = intersect_aabb( vec3(right_child.min_x, right_child.min_y, right_child.min_z), vec3(right_child.max_x, right_child.max_y, right_child.max_z), ray, FLOAT_MAX);
+        if (left_distance > d || right_distance > d){
+            if(stack_ptr == 0){
+                break;
+            } else {
+                stack_ptr -= 1;
+                node_idx = stack[stack_ptr];
+                continue;
+            }
+        }
         if (left_distance > right_distance) {
             swap_int(left_child_idx, right_child_idx);
             swap_float(left_distance, right_distance); 

@@ -1,20 +1,21 @@
 use core::panic;
 
 use crate::{
-    acceleration_structure::AccelerationStructure,
+    bottom_level_acceleration_structure::AccelerationStructure,
     bvh::{BVHMidPointSplit, Node},
-    types::{Ray, Triangle, Vertex},
+    types::{Mat4, Ray, Triangle, Vertex},
 };
 
 pub struct AccMidPointSplit {
     bvh: Option<BVHMidPointSplit>,
-    use_sah: bool,
 }
 
 // Slits aabb into middle along the largest axis
 impl AccMidPointSplit {
-    pub fn new(use_sah: bool) -> Self {
-        Self { bvh: None, use_sah }
+    pub fn new(vertices: &[Vertex], triangles: &[Triangle], use_sah: bool) -> Self {
+        Self {
+            bvh: Some(BVHMidPointSplit::new(vertices, triangles, use_sah)),
+        }
     }
 
     pub fn nodes(&self) -> &[Node] {
@@ -38,19 +39,13 @@ impl AccMidPointSplit {
     }
 }
 
-impl Default for AccMidPointSplit {
-    fn default() -> Self {
-        Self::new(false)
-    }
-}
-
 impl AccelerationStructure for AccMidPointSplit {
-    fn build(&mut self, vertices: &[Vertex], triangles: &[Triangle]) {
-        self.bvh = Some(BVHMidPointSplit::new(vertices, triangles, self.use_sah))
+    fn trace(&self, ray: &Ray, transform: &Mat4) -> (i32, f32) {
+        let bvh = self.bvh.as_ref().unwrap();
+        (0, bvh.traverse_stack(ray, transform))
     }
 
-    fn trace(&self, ray: &Ray) -> (i32, f32) {
-        let bvh = self.bvh.as_ref().unwrap();
-        (0, bvh.traverse_stack(ray))
+    fn aabb(&self) -> &crate::types::AABB {
+        &self.nodes()[0].aabb
     }
 }

@@ -1,36 +1,33 @@
 use crate::{
-    acceleration_structure::AccelerationStructure,
+    bottom_level_acceleration_structure::AccelerationStructure,
     intersect::intersect_triangle,
-    types::{Ray, Triangle, Vertex},
+    types::{vec4_to_3, Mat4, Ray, Triangle, Vertex, AABB},
 };
 
 pub struct BruteForceStructure {
     vertices: Vec<Vertex>,
     triangles: Vec<Triangle>,
+    aabb: AABB,
 }
 
 impl BruteForceStructure {
-    pub fn new() -> Self {
+    pub fn new(vertices: &[Vertex], triangles: &[Triangle]) -> Self {
+        let mut aabb = AABB::default();
+        for t in triangles {
+            aabb.grow_with_position(&vec4_to_3(vertices[t.v0 as usize]));
+            aabb.grow_with_position(&vec4_to_3(vertices[t.v1 as usize]));
+            aabb.grow_with_position(&vec4_to_3(vertices[t.v2 as usize]));
+        }
         Self {
-            vertices: Vec::new(),
-            triangles: Vec::new(),
+            vertices: vertices.to_vec(),
+            triangles: triangles.to_vec(),
+            aabb,
         }
     }
 }
 
-impl Default for BruteForceStructure {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl AccelerationStructure for BruteForceStructure {
-    fn build(&mut self, vertices: &[Vertex], triangles: &[Triangle]) {
-        self.vertices = vertices.to_vec();
-        self.triangles = triangles.to_vec();
-    }
-
-    fn trace(&self, ray: &Ray) -> (i32, f32) {
+    fn trace(&self, ray: &Ray, transform: &Mat4) -> (i32, f32) {
         let mut t = f32::MAX;
         for i in 0..self.triangles.len() {
             let triangle = &self.triangles[i];
@@ -45,5 +42,9 @@ impl AccelerationStructure for BruteForceStructure {
         }
 
         (0, t)
+    }
+
+    fn aabb(&self) -> &crate::types::AABB {
+        todo!()
     }
 }
