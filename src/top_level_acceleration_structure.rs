@@ -149,6 +149,7 @@ impl TopLevelAccelerationStructure {
                     if record.t < d {
                         record.object_id = i as _;
                         d = record.t;
+                        record.obj_to_world = *transform;
                     }
                 }
                 if stack_ptr == 0 {
