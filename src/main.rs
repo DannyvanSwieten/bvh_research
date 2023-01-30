@@ -138,6 +138,11 @@ fn main() {
             2,
             Matrix4::<f32>::from_translation(Vec3::new(1.0, 1.0, 0.0)),
         ),
+        Instance::new(
+            midpoint_split_acc.clone(),
+            2,
+            Matrix4::<f32>::from_translation(Vec3::new(1.5, -1.0, 0.0)),
+        ),
     ];
 
     let tlas = TopLevelAccelerationStructure::new(&instances);
