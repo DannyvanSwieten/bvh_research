@@ -27,6 +27,6 @@ impl RayGenerator for GpuRayGenerator {
     }
 
     fn generate_rays(&self, width: usize, height: usize) -> &Self::RayBuffer {
-        todo!()
+        &self.ray_buffer
     }
 }

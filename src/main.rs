@@ -4,6 +4,7 @@ pub mod brute_force;
 pub mod bvh;
 pub mod camera;
 pub mod frame_buffer;
+pub mod gpu_acceleration_structure;
 pub mod intersect;
 pub mod ray_generator;
 pub mod top_level_acceleration_structure;

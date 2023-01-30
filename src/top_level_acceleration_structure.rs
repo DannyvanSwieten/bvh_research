@@ -32,7 +32,7 @@ impl Default for TlasNode {
 
 #[derive(Clone)]
 pub struct Instance {
-    blas: Rc<dyn AccelerationStructure>,
+    pub blas: Rc<dyn AccelerationStructure>,
     id: u32,
     transform: Matrix4<f32>,
 }
@@ -197,5 +197,9 @@ impl TopLevelAccelerationStructure {
         }
 
         record
+    }
+
+    pub fn instances(&self) -> &[Instance] {
+        &self.instances
     }
 }
