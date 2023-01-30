@@ -23,7 +23,7 @@ impl Default for Node {
         }
     }
 }
-pub struct BVHMidPointSplit {
+pub struct Bvh {
     vertices: Vec<Vertex>,
     triangles: Vec<Triangle>,
     nodes: Vec<Node>,
@@ -31,7 +31,7 @@ pub struct BVHMidPointSplit {
     use_sah: bool,
 }
 
-impl BVHMidPointSplit {
+impl Bvh {
     pub fn new(vertices: &[Vertex], triangles: &[Triangle], use_sah: bool) -> Self {
         // Initialize all nodes to default
         let mut nodes = Vec::new();
@@ -63,6 +63,10 @@ impl BVHMidPointSplit {
         this.update_bounds(0);
         this.subdivide(0, &mut centroids);
         this
+    }
+
+    pub fn aabb(&self) -> &AABB {
+        &self.nodes[0].aabb
     }
 
     pub fn nodes(&self) -> &[Node] {
@@ -222,7 +226,11 @@ impl BVHMidPointSplit {
         }
     }
 
-    pub fn traverse_stack(&self, ray: &Ray, transform: &Mat4, hit_record: &mut HitRecord) {
+    pub fn size(&self) -> u64 {
+        std::mem::size_of::<Node>() as u64 * self.nodes.len() as u64
+    }
+
+    pub fn traverse(&self, ray: &Ray, transform: &Mat4, hit_record: &mut HitRecord) {
         let mut node_idx = 0;
         let mut stack_ptr = 0;
         let mut stack = [0; 64];

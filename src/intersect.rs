@@ -3,12 +3,12 @@ use cgmath::InnerSpace;
 use crate::types::{vec4_to_3, Ray, Vertex, AABB};
 
 pub fn intersect_aabb(aabb: &AABB, ray: &Ray, t_far: f32) -> f32 {
-    let tx1 = (aabb.min.x - ray.origin.x) / ray.direction.x;
-    let tx2 = (aabb.max.x - ray.origin.x) / ray.direction.x;
-    let ty1 = (aabb.min.y - ray.origin.y) / ray.direction.y;
-    let ty2 = (aabb.max.y - ray.origin.y) / ray.direction.y;
-    let tz1 = (aabb.min.z - ray.origin.z) / ray.direction.z;
-    let tz2 = (aabb.max.z - ray.origin.z) / ray.direction.z;
+    let tx1 = (aabb.min.x - ray.origin.x) * ray.inv_direcion.x;
+    let tx2 = (aabb.max.x - ray.origin.x) * ray.inv_direcion.x;
+    let ty1 = (aabb.min.y - ray.origin.y) * ray.inv_direcion.y;
+    let ty2 = (aabb.max.y - ray.origin.y) * ray.inv_direcion.y;
+    let tz1 = (aabb.min.z - ray.origin.z) * ray.inv_direcion.z;
+    let tz2 = (aabb.max.z - ray.origin.z) * ray.inv_direcion.z;
 
     let t_min = tx1.min(tx2);
     let t_max = tx1.max(tx2);

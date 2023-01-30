@@ -1,0 +1,272 @@
+#version 450
+#extension GL_EXT_nonuniform_qualifier: require
+
+struct Node{
+    float min_x;
+    float min_y;
+    float min_z;
+    float max_x;
+    float max_y;
+    float max_z;
+    uint first_primitive;
+    uint primitive_count;
+};
+
+struct Ray{
+    vec3 origin;
+    vec3 direction;
+    vec3 invDirection;
+};
+
+layout(std430, set = 0, binding = 0) buffer TopLevelBvh{
+    Node nodes[];
+} tlas;
+
+layout(std430, set = 0, binding = 1) buffer BottomLevelBvh{
+    Node nodes[];
+} blas[];
+
+layout(std430, set = 0, binding = 2) buffer VertexBuffer{
+    vec3 vertices[];
+} Vertices;
+
+layout(std430, set = 0, binding = 3) buffer IndexBuffer{
+    ivec3 indices[];
+} Triangles;
+
+layout(set = 0, binding = 3, rgba8) uniform image2D output_buffer;
+
+#define FLOAT_MAX 100000
+
+void swap_int(inout uint a, inout uint b){
+    uint tmp = a;
+    a = b;
+    b = tmp;
+}
+
+void swap_float(inout float a, inout float b){
+    float tmp = a;
+    a = b;
+    b = tmp;
+}
+
+float max_element(vec3 v){
+    return max(v.x, max(v.y, v.z));
+}
+
+float min_element(vec3 v){
+    return min(v.x, min(v.y, v.z));
+}
+
+float intersect_aabb(vec3 aabb_min, vec3 aabb_max, Ray ray, float t_far) {
+
+    vec3 t_min = (aabb_min - ray.origin) * ray.invDirection;
+    vec3 t_max = (aabb_max - ray.origin) * ray.invDirection;
+
+    vec3 t1 = min(t_min, t_max);
+    vec3 t2 = max(t_min, t_max);
+
+    float t_near = max_element(t1);
+    float t_f = min_element(t2);
+
+    bool h = t_f > t_near && t_near < t_far && t_f > 0.0;
+    if(h)
+        return min(t_f, t_near);
+    else
+        return t_far;
+}
+
+float intersect_triangle(Ray ray, vec3 v0, vec3 v1, vec3 v2)
+{
+    vec3 edge1 = v1 - v0;
+    vec3 edge2 = v2 - v0;
+    vec3 h = cross(ray.direction, edge2);
+    float a = dot(edge1, h);
+    // Assume faceculling is enabled.
+    if (a < 0.0001) {
+        // Ray is parallel to the triangle
+        return FLOAT_MAX;
+    }
+
+    float f = 1.0 / a;
+    vec3 s = ray.origin - v0;
+    float u = f * dot(s, h);
+    if (u < 0.0 || u > 1.0) {
+        return FLOAT_MAX;
+    }
+    vec3 q = cross(s, edge1);
+    float v = f * dot(ray.direction, q);
+    if (v < 0.0 || u + v > 1.0) {
+        return FLOAT_MAX;
+    }
+
+    float t = f * dot(edge2, q);
+    if (t < 0.000001) {
+        return FLOAT_MAX;
+    }
+
+    return t;
+}
+
+float traverse_bttm_level(Ray ray, int primitive_id);
+float traverse_top_level(Ray ray)
+{
+    uint node_idx = 0;
+    uint stack_ptr = 0;
+    uint stack[64];
+    float d = FLOAT_MAX;
+    while(true) {
+        Node node = tlas.nodes[node_idx];
+        if (tlas.nodes[node_idx].primitive_count > 0) {
+            uint first = node.first_primitive;
+            uint last = first + node.primitive_count;
+            for (uint p = first; p < last; ++p) {
+                float dl = traverse_bttm_level(ray, 0);
+
+                if (dl < d) {
+                    d = dl;
+                }
+            }
+            if (stack_ptr == 0) {
+                break;
+            } else {
+                stack_ptr -= 1;
+                node_idx = stack[stack_ptr];
+                continue;
+            }
+        }
+
+        uint left_child_idx = node.first_primitive ;
+        uint right_child_idx = left_child_idx + 1;
+        Node left_child = tlas.nodes[left_child_idx];
+        Node right_child = tlas.nodes[right_child_idx];
+        float left_distance = intersect_aabb(vec3(left_child.min_x, left_child.min_y, left_child.min_z), vec3(left_child.max_x, left_child.max_y, left_child.max_z), ray, FLOAT_MAX);
+        float right_distance = intersect_aabb( vec3(right_child.min_x, right_child.min_y, right_child.min_z), vec3(right_child.max_x, right_child.max_y, right_child.max_z), ray, FLOAT_MAX);
+        if (left_distance > d || right_distance > d){
+            if(stack_ptr == 0){
+                break;
+            } else {
+                stack_ptr -= 1;
+                node_idx = stack[stack_ptr];
+                continue;
+            }
+        }
+        if (left_distance > right_distance) {
+            swap_int(left_child_idx, right_child_idx);
+            swap_float(left_distance, right_distance); 
+        }
+        if (left_distance == FLOAT_MAX) {
+            if (stack_ptr == 0) {
+                break;
+            } else {
+                stack_ptr -= 1;
+                node_idx = stack[stack_ptr];
+            }
+        } else {
+            node_idx = left_child_idx;
+            if (right_distance != FLOAT_MAX) {
+                stack[stack_ptr] = right_child_idx;
+                stack_ptr += 1;
+            }
+        }
+    }
+
+    return d;
+}
+
+float traverse_bttm_level(Ray ray, int geometry_id)
+{
+    uint node_idx = 0;
+    uint stack_ptr = 0;
+    uint stack[64];
+    float d = FLOAT_MAX;
+    while(true) {
+        Node node = blas[geometry_id].nodes[node_idx];
+        if (blas[geometry_id].nodes[node_idx].primitive_count > 0) {
+            uint first = node.first_primitive;
+            uint last = first + node.primitive_count;
+            for (uint p = first; p < last; ++p) {
+                ivec3 triangle = Triangles.indices[p];
+                float dl = intersect_triangle(
+                    ray,
+                    Vertices.vertices[triangle.x ].xyz,
+                    Vertices.vertices[triangle.y ].xyz,
+                    Vertices.vertices[triangle.z ].xyz
+                );
+
+                if (dl < d) {
+                    d = dl;
+                }
+            }
+            if (stack_ptr == 0) {
+                break;
+            } else {
+                stack_ptr -= 1;
+                node_idx = stack[stack_ptr];
+                continue;
+            }
+        }
+
+        uint left_child_idx = node.first_primitive ;
+        uint right_child_idx = left_child_idx + 1;
+        Node left_child = blas[geometry_id].nodes[left_child_idx];
+        Node right_child = blas[geometry_id].nodes[right_child_idx];
+        float left_distance = intersect_aabb(vec3(left_child.min_x, left_child.min_y, left_child.min_z), vec3(left_child.max_x, left_child.max_y, left_child.max_z), ray, FLOAT_MAX);
+        float right_distance = intersect_aabb( vec3(right_child.min_x, right_child.min_y, right_child.min_z), vec3(right_child.max_x, right_child.max_y, right_child.max_z), ray, FLOAT_MAX);
+        if (left_distance > d || right_distance > d){
+            if(stack_ptr == 0){
+                break;
+            } else {
+                stack_ptr -= 1;
+                node_idx = stack[stack_ptr];
+                continue;
+            }
+        }
+        if (left_distance > right_distance) {
+            swap_int(left_child_idx, right_child_idx);
+            swap_float(left_distance, right_distance); 
+        }
+        if (left_distance == FLOAT_MAX) {
+            if (stack_ptr == 0) {
+                break;
+            } else {
+                stack_ptr -= 1;
+                node_idx = stack[stack_ptr];
+            }
+        } else {
+            node_idx = left_child_idx;
+            if (right_distance != FLOAT_MAX) {
+                stack[stack_ptr] = right_child_idx;
+                stack_ptr += 1;
+            }
+        }
+    }
+
+    return d;
+}
+
+Ray create_ray(vec2 resolution, vec2 frag_location, vec3 origin, float z){
+    vec2 norm = frag_location / resolution;
+    vec3 p0 = vec3(-1, 1, z);
+    vec3 p1 = vec3(1, 1, z);
+    vec3 p2 = vec3(-1, -1, z);
+
+    vec3 pixel_position = 
+            p0
+            + (p1 - p0) * norm.x
+            + (p2 - p0) * norm.y;
+
+    vec3 direction = normalize(pixel_position - origin);
+    Ray ray;
+    ray.origin = origin;
+    ray.direction = direction;
+    ray.invDirection = 1.0 / direction;
+    return ray;
+}
+
+void main(){
+    Ray ray = create_ray(vec2(640, 640), vec2(gl_GlobalInvocationID.xy), vec3(-5, 0, -15), 2);
+    float d = traverse_top_level(ray);
+    if(d < FLOAT_MAX)
+        imageStore(output_buffer, ivec2(gl_GlobalInvocationID.xy), vec4(1));
+}

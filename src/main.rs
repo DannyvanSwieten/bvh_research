@@ -1,6 +1,3 @@
-pub mod acc_bvh_midpoint_split;
-pub mod bottom_level_acceleration_structure;
-pub mod brute_force;
 pub mod bvh;
 pub mod camera;
 pub mod frame_buffer;
@@ -13,7 +10,7 @@ pub mod types;
 
 use std::{io::BufRead, rc::Rc, time::Instant};
 
-use cgmath::{Matrix4, SquareMatrix};
+use cgmath::Matrix4;
 use image::ColorType;
 use types::{Triangle, Vertex};
 use vk_utils::{
@@ -24,8 +21,7 @@ use vk_utils::{
 };
 
 use crate::{
-    acc_bvh_midpoint_split::AccMidPointSplit,
-    brute_force::BruteForceStructure,
+    bvh::Bvh,
     camera::Camera,
     frame_buffer::Framebuffer,
     top_level_acceleration_structure::{Instance, TopLevelAccelerationStructure},
@@ -125,8 +121,7 @@ fn main() {
     let camera = Camera::new(Position::new(-5.0, 0.0, -15.0), 2.0);
     let tracer = CpuTracer {};
 
-    let _brute_force_acc = Rc::new(BruteForceStructure::new(&vertices, &triangles));
-    let midpoint_split_acc = Rc::new(AccMidPointSplit::new(&vertices, &triangles, true));
+    let midpoint_split_acc = Rc::new(Bvh::new(&vertices, &triangles, true));
 
     let instances = [
         Instance::new(
@@ -186,7 +181,7 @@ fn main() {
 
     let shader_path = std::env::current_dir()
         .unwrap()
-        .join("./assets/traverse_bttm_level.comp");
+        .join("./assets/ray_intersector.comp");
     let logical_device = Rc::new(logical_device);
     let pipeline = ComputePipeline::new_from_source_file(
         shader_path.as_path(),
@@ -197,7 +192,7 @@ fn main() {
     if let Some(mut pipeline) = pipeline {
         let mut bvh_buffer = BufferResource::new(
             logical_device.clone(),
-            midpoint_split_acc.byte_size(),
+            midpoint_split_acc.size(),
             MemoryPropertyFlags::HOST_VISIBLE,
             BufferUsageFlags::STORAGE_BUFFER,
         );

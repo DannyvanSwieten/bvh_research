@@ -3,7 +3,7 @@ use std::rc::Rc;
 use cgmath::Matrix4;
 
 use crate::{
-    bottom_level_acceleration_structure::AccelerationStructure,
+    bvh::Bvh,
     intersect::intersect_aabb,
     types::{HitRecord, Ray, AABB},
 };
@@ -32,13 +32,13 @@ impl Default for TlasNode {
 
 #[derive(Clone)]
 pub struct Instance {
-    pub blas: Rc<dyn AccelerationStructure>,
+    pub blas: Rc<Bvh>,
     id: u32,
     transform: Matrix4<f32>,
 }
 
 impl Instance {
-    pub fn new(blas: Rc<dyn AccelerationStructure>, id: u32, transform: Matrix4<f32>) -> Self {
+    pub fn new(blas: Rc<Bvh>, id: u32, transform: Matrix4<f32>) -> Self {
         Self {
             blas,
             id,
@@ -126,6 +126,14 @@ impl TopLevelAccelerationStructure {
         this
     }
 
+    pub fn size(&self) -> u64 {
+        std::mem::size_of::<TlasNode>() as u64 * self.nodes.len() as u64
+    }
+
+    pub fn nodes(&self) -> &[TlasNode] {
+        &self.nodes
+    }
+
     pub fn traverse(&self, ray: &Ray) -> HitRecord {
         self.traverse_stack(ray)
     }
@@ -145,7 +153,7 @@ impl TopLevelAccelerationStructure {
                 for i in first..last {
                     let instance = &self.instances[i];
                     let transform = &instance.transform;
-                    instance.blas.trace(ray, transform, &mut record);
+                    instance.blas.traverse(ray, transform, &mut record);
                     if record.t < d {
                         record.object_id = i as _;
                         d = record.t;

@@ -1,7 +1,6 @@
 use crate::{
-    bottom_level_acceleration_structure::AccelerationStructure, camera::Camera,
-    frame_buffer::Framebuffer, top_level_acceleration_structure::TopLevelAccelerationStructure,
-    types::HdrColor,
+    camera::Camera, frame_buffer::Framebuffer,
+    top_level_acceleration_structure::TopLevelAccelerationStructure, types::HdrColor,
 };
 
 pub trait Tracer {
