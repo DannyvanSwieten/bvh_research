@@ -305,5 +305,4 @@ fn main() {
         )
         .expect("Image write failed");
     }
-    print!("{}", 0);
 }

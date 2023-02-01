@@ -211,3 +211,5 @@ impl TopLevelAccelerationStructure {
         &self.instances
     }
 }
+
+unsafe impl Sync for TopLevelAccelerationStructure {}
