@@ -234,15 +234,15 @@ float traverse_bttm_level(Ray ray, uint instance_id, inout float u, inout float 
         Node right_child = blas_ref.nodes[right_child_idx];
         float left_distance = intersect_aabb(vec3(left_child.min_x, left_child.min_y, left_child.min_z), vec3(left_child.max_x, left_child.max_y, left_child.max_z), ray, FLOAT_MAX);
         float right_distance = intersect_aabb( vec3(right_child.min_x, right_child.min_y, right_child.min_z), vec3(right_child.max_x, right_child.max_y, right_child.max_z), ray, FLOAT_MAX);
-        if (left_distance > d || right_distance > d){
-            if(stack_ptr == 0){
-                break;
-            } else {
-                stack_ptr -= 1;
-                node_idx = stack[stack_ptr];
-                continue;
-            }
-        }
+        // if (left_distance > d || right_distance > d){
+            // if(stack_ptr == 0){
+            //     break;
+            // } else {
+            //     stack_ptr -= 1;
+            //     node_idx = stack[stack_ptr];
+            //     continue;
+            // }
+        // }
         if (left_distance > right_distance) {
             swap_int(left_child_idx, right_child_idx);
             swap_float(left_distance, right_distance); 

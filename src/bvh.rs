@@ -278,15 +278,15 @@ impl Bvh {
             let right_child = &self.nodes[right_child_idx];
             let mut left_distance = intersect_aabb(&left_child.aabb, &inv_ray, f32::MAX);
             let mut right_distance = intersect_aabb(&right_child.aabb, &inv_ray, f32::MAX);
-            if left_distance > hit_record.t || right_distance > hit_record.t {
-                if stack_ptr == 0 {
-                    break;
-                } else {
-                    stack_ptr -= 1;
-                    node_idx = stack[stack_ptr];
-                    continue;
-                }
-            }
+            // if left_distance > hit_record.t || right_distance > hit_record.t {
+            //     if stack_ptr == 0 {
+            //         break;
+            //     } else {
+            //         stack_ptr -= 1;
+            //         node_idx = stack[stack_ptr];
+            //         continue;
+            //     }
+            // }
             if left_distance > right_distance {
                 std::mem::swap(&mut left_child_idx, &mut right_child_idx);
                 std::mem::swap(&mut left_distance, &mut right_distance);
