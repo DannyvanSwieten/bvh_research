@@ -108,8 +108,8 @@ impl TopLevelAccelerationStructure {
     }
 
     pub fn new(instances: &[Instance]) -> Self {
-        let mut nodes = vec![TlasNode::new()];
-        let mut boxes = vec![AABB::default()];
+        let mut nodes = Vec::new();
+        let mut boxes = Vec::new();
         for instance in instances {
             nodes.push(TlasNode::new());
             boxes.push(instance.blas.aabb().transformed(&instance.transform))

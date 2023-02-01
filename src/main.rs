@@ -2,13 +2,14 @@ pub mod bvh;
 pub mod camera;
 pub mod frame_buffer;
 pub mod gpu_acceleration_structure;
+pub mod gpu_blas;
 pub mod intersect;
 pub mod ray_generator;
 pub mod top_level_acceleration_structure;
 pub mod trace;
 pub mod types;
 
-use std::{io::BufRead, rc::Rc, time::Instant};
+use std::{collections::HashMap, io::BufRead, rc::Rc, time::Instant};
 
 use cgmath::Matrix4;
 use image::ColorType;
@@ -16,14 +17,17 @@ use types::{Triangle, Vertex};
 use vk_utils::{
     buffer_resource::BufferResource, command_buffer::CommandBuffer,
     image2d_resource::Image2DResource, pipeline_descriptor::ComputePipeline, queue::CommandQueue,
-    vulkan::Vulkan, BufferUsageFlags, DebugUtils, Format, ImageLayout, ImageUsageFlags,
-    MemoryPropertyFlags, QueueFlags,
+    vulkan::Vulkan, BufferUsageFlags, DebugUtils, DescriptorSetLayoutBinding, DescriptorType,
+    Format, ImageLayout, ImageUsageFlags, MemoryPropertyFlags, PhysicalDeviceFeatures2KHR,
+    PhysicalDeviceVulkan12Features, QueueFlags, ShaderStageFlags,
 };
 
 use crate::{
     bvh::Bvh,
     camera::Camera,
     frame_buffer::Framebuffer,
+    gpu_acceleration_structure::GpuTlas,
+    gpu_blas::{GpuBlas, GpuInstanceProxy},
     top_level_acceleration_structure::{Instance, TopLevelAccelerationStructure},
     trace::{CpuTracer, Tracer},
     types::{HdrColor, Position, Vec3},
@@ -123,34 +127,13 @@ fn main() {
 
     let midpoint_split_acc = Rc::new(Bvh::new(&vertices, &triangles, true));
 
-    let instances = [
-        Instance::new(
-            midpoint_split_acc.clone(),
-            0,
-            Matrix4::<f32>::from_scale(1.0),
-        ),
-        Instance::new(
-            midpoint_split_acc.clone(),
-            2,
-            Matrix4::<f32>::from_translation(Vec3::new(1.0, 1.0, 0.0)),
-        ),
-        Instance::new(
-            midpoint_split_acc.clone(),
-            2,
-            Matrix4::<f32>::from_translation(Vec3::new(1.5, -1.0, 0.0)),
-        ),
-    ];
+    let instances = [Instance::new(
+        midpoint_split_acc.clone(),
+        0,
+        Matrix4::<f32>::from_scale(1.0),
+    )];
 
     let tlas = TopLevelAccelerationStructure::new(&instances);
-
-    // let now = Instant::now();
-    // tracer.trace(&camera, &mut framebuffer, &brute_force_acc);
-    // let elapsed_time = now.elapsed();
-    // println!(
-    //     "Tracing brute force took {} millis.",
-    //     elapsed_time.as_millis()
-    // );
-    // write_framebuffer_to_file("brute_force.png", &framebuffer);
 
     framebuffer.clear(HdrColor::new(0.0, 0.0, 0.0, 0.0));
     let now = Instant::now();
@@ -164,7 +147,7 @@ fn main() {
 
     let vulkan = Vulkan::new(
         "My Application",
-        &[],
+        &["VK_LAYER_KHRONOS_validation"],
         &[DebugUtils::name().to_str().unwrap()],
     );
 
@@ -174,30 +157,83 @@ fn main() {
         .position(|device| device.supports_compute());
 
     let logical_device = if let Some(index) = graphics_compute_index {
-        physical_devices[index].device_context(&[])
+        let gpu = &physical_devices[index];
+        let mut address_features = PhysicalDeviceVulkan12Features::builder()
+            .buffer_device_address(true)
+            .shader_input_attachment_array_dynamic_indexing(true)
+            .descriptor_indexing(true)
+            .runtime_descriptor_array(true)
+            .build();
+        let mut features2 = PhysicalDeviceFeatures2KHR::default();
+        unsafe {
+            gpu.vulkan()
+                .vk_instance()
+                .get_physical_device_features2(*gpu.vk_physical_device(), &mut features2);
+        }
+        gpu.device_context_builder(&["VK_KHR_buffer_device_address"], |builder| {
+            builder
+                .push_next(&mut address_features)
+                .enabled_features(&features2.features)
+        })
     } else {
         panic!()
     };
 
+    let logical_device = Rc::new(logical_device);
+    let object = Rc::new(GpuBlas::new(
+        logical_device.clone(),
+        midpoint_split_acc.clone(),
+    ));
+    let gpu_instances = [GpuInstanceProxy::new(object.clone(), 0)];
+
     let shader_path = std::env::current_dir()
         .unwrap()
         .join("./assets/ray_intersector.comp");
-    let logical_device = Rc::new(logical_device);
+    let mut explicit_bindings = HashMap::new();
+    let tlas_buffer_layout_binding = DescriptorSetLayoutBinding::builder()
+        .binding(0)
+        .descriptor_count(1)
+        .descriptor_type(DescriptorType::STORAGE_BUFFER)
+        .stage_flags(ShaderStageFlags::COMPUTE)
+        .build();
+    let instance_buffer_layout_binding = DescriptorSetLayoutBinding::builder()
+        .binding(1)
+        .descriptor_count(1)
+        .descriptor_type(DescriptorType::STORAGE_BUFFER)
+        .stage_flags(ShaderStageFlags::COMPUTE)
+        .build();
+    let vertex_buffer_layout_binding = DescriptorSetLayoutBinding::builder()
+        .binding(2)
+        .descriptor_count(1)
+        .descriptor_type(DescriptorType::STORAGE_BUFFER)
+        .stage_flags(ShaderStageFlags::COMPUTE)
+        .build();
+    let index_buffer_layout_binding = DescriptorSetLayoutBinding::builder()
+        .binding(3)
+        .descriptor_count(1)
+        .descriptor_type(DescriptorType::STORAGE_BUFFER)
+        .stage_flags(ShaderStageFlags::COMPUTE)
+        .build();
+    explicit_bindings.insert(
+        0,
+        vec![
+            tlas_buffer_layout_binding,
+            instance_buffer_layout_binding,
+            vertex_buffer_layout_binding,
+            index_buffer_layout_binding,
+        ],
+    );
     let pipeline = ComputePipeline::new_from_source_file(
         shader_path.as_path(),
         logical_device.clone(),
         1,
         "main",
+        Some(explicit_bindings),
     );
     if let Some(mut pipeline) = pipeline {
-        let mut bvh_buffer = BufferResource::new(
-            logical_device.clone(),
-            midpoint_split_acc.size(),
-            MemoryPropertyFlags::HOST_VISIBLE,
-            BufferUsageFlags::STORAGE_BUFFER,
-        );
-        bvh_buffer.upload(&midpoint_split_acc.nodes());
-        pipeline.set_storage_buffer(0, 0, &bvh_buffer);
+        let gpu_tlas = GpuTlas::new(logical_device.clone(), &gpu_instances);
+        pipeline.set_storage_buffer(0, 0, &gpu_tlas.tlas_buffer);
+        pipeline.set_storage_buffer(0, 1, &gpu_tlas.instance_buffer);
 
         let vertex_buffer_size = std::mem::size_of::<Vertex>() * vertices.len();
         let mut vertex_buffer = BufferResource::new(
@@ -207,7 +243,7 @@ fn main() {
             BufferUsageFlags::STORAGE_BUFFER,
         );
         vertex_buffer.upload(&vertices);
-        pipeline.set_storage_buffer(0, 1, &vertex_buffer);
+        pipeline.set_storage_buffer(0, 2, &vertex_buffer);
 
         let index_buffer_size =
             std::mem::size_of::<Triangle>() * midpoint_split_acc.triangles().len();
@@ -217,8 +253,8 @@ fn main() {
             MemoryPropertyFlags::HOST_VISIBLE,
             BufferUsageFlags::STORAGE_BUFFER,
         );
-        index_buffer.upload(&midpoint_split_acc.triangles());
-        pipeline.set_storage_buffer(0, 2, &index_buffer);
+        index_buffer.upload(midpoint_split_acc.triangles());
+        pipeline.set_storage_buffer(0, 3, &index_buffer);
 
         let mut image = Image2DResource::new(
             logical_device.clone(),
@@ -236,7 +272,7 @@ fn main() {
         let mut command_buffer = CommandBuffer::new(queue.clone());
         command_buffer.begin();
         command_buffer.image_resource_transition(&mut image, ImageLayout::GENERAL);
-        pipeline.set_storage_image(0, 3, &image);
+        pipeline.set_storage_image(0, 4, &image);
         command_buffer.bind_compute_pipeline(&pipeline);
         let now = Instant::now();
         command_buffer.dispatch_compute(640, 640, 1);
