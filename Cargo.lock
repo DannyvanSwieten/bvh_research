@@ -57,6 +57,7 @@ dependencies = [
  "cgmath",
  "image",
  "rand",
+ "rayon",
  "vk_utils",
 ]
 

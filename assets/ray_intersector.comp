@@ -23,8 +23,8 @@ struct Ray{
 
 struct Instance{
     uint64_t blas_address;
-    // uint instance_id;
-    // mat4 transform;
+    uint64_t instance_id;
+    mat4 transform;
 };
 
 layout(buffer_reference, scalar) readonly buffer BlasRef{
@@ -35,7 +35,7 @@ layout(scalar, set = 0, binding = 0) readonly buffer TopLevelBvh{
     Node tlas[];
 };
 
-layout(std430, set = 0, binding = 1) readonly buffer InstanceBuffer {
+layout(scalar, buffer_reference_align = 4, set = 0, binding = 1) readonly buffer InstanceBuffer {
     Instance instances[];
 };
 
@@ -192,11 +192,18 @@ float traverse_top_level(Ray ray, inout float u, inout float v)
 
 float traverse_bttm_level(Ray ray, uint instance_id, inout float u, inout float v)
 {
-    BlasRef blas_ref = BlasRef(instances[instance_id].blas_address);
+    Instance instance = instances[instance_id];
+    BlasRef blas_ref = BlasRef(instance.blas_address);
     uint node_idx = 0;
     uint stack_ptr = 0;
     uint stack[64];
     float d = FLOAT_MAX;
+    mat4 inverse_transform = inverse(instance.transform);
+    Ray rayInv;
+    rayInv.origin = (inverse_transform * vec4(ray.origin, 1)).xyz;
+    rayInv.direction = (inverse_transform * vec4(ray.direction, 0)).xyz;
+    rayInv.invDirection = 1.0 / rayInv.direction;
+    
     while(true) {
         Node node = blas_ref.nodes[node_idx];
         if (node.primitive_count > 0) {
@@ -206,7 +213,7 @@ float traverse_bttm_level(Ray ray, uint instance_id, inout float u, inout float 
                 ivec3 triangle = indices[p];
                 float lu, lv;
                 float dl = intersect_triangle(
-                    ray,
+                    rayInv,
                     vertices[triangle.x ].xyz,
                     vertices[triangle.y ].xyz,
                     vertices[triangle.z ].xyz,
@@ -232,17 +239,9 @@ float traverse_bttm_level(Ray ray, uint instance_id, inout float u, inout float 
         uint right_child_idx = left_child_idx + 1;
         Node left_child = blas_ref.nodes[left_child_idx];
         Node right_child = blas_ref.nodes[right_child_idx];
-        float left_distance = intersect_aabb(vec3(left_child.min_x, left_child.min_y, left_child.min_z), vec3(left_child.max_x, left_child.max_y, left_child.max_z), ray, FLOAT_MAX);
-        float right_distance = intersect_aabb( vec3(right_child.min_x, right_child.min_y, right_child.min_z), vec3(right_child.max_x, right_child.max_y, right_child.max_z), ray, FLOAT_MAX);
-        // if (left_distance > d || right_distance > d){
-            // if(stack_ptr == 0){
-            //     break;
-            // } else {
-            //     stack_ptr -= 1;
-            //     node_idx = stack[stack_ptr];
-            //     continue;
-            // }
-        // }
+        float left_distance = intersect_aabb(vec3(left_child.min_x, left_child.min_y, left_child.min_z), vec3(left_child.max_x, left_child.max_y, left_child.max_z), rayInv, FLOAT_MAX);
+        float right_distance = intersect_aabb( vec3(right_child.min_x, right_child.min_y, right_child.min_z), vec3(right_child.max_x, right_child.max_y, right_child.max_z), rayInv, FLOAT_MAX);
+
         if (left_distance > right_distance) {
             swap_int(left_child_idx, right_child_idx);
             swap_float(left_distance, right_distance); 
@@ -290,5 +289,5 @@ void main(){
     float u, v;
     float d = traverse_top_level(ray, u, v);
     if(d < FLOAT_MAX)
-        imageStore(output_buffer, ivec2(gl_GlobalInvocationID.xy), vec4(u, v, 1 - u - v, 1));
+        imageStore(output_buffer, ivec2(gl_GlobalInvocationID.xy), vec4(1 - u - v, u, v, 1));
 }

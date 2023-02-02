@@ -4,6 +4,7 @@ pub mod frame_buffer;
 pub mod gpu_acceleration_structure;
 pub mod gpu_blas;
 pub mod intersect;
+pub mod mesh;
 pub mod ray_generator;
 pub mod top_level_acceleration_structure;
 pub mod trace;
@@ -30,7 +31,7 @@ use crate::{
     gpu_blas::{GpuBlas, GpuInstanceProxy},
     top_level_acceleration_structure::{Instance, TopLevelAccelerationStructure},
     trace::{CpuTracer, Tracer},
-    types::{HdrColor, Position, Vec3},
+    types::{HdrColor, Mat4, Position},
 };
 
 fn read_triangle_file(name: &str) -> (Vec<Vertex>, Vec<Triangle>) {
@@ -184,7 +185,11 @@ fn main() {
         logical_device.clone(),
         midpoint_split_acc.clone(),
     ));
-    let gpu_instances = [GpuInstanceProxy::new(object.clone(), 0)];
+    let gpu_instances = [
+        GpuInstanceProxy::new(object.clone(), 0),
+        GpuInstanceProxy::new(object.clone(), 1)
+            .with_transform(Mat4::from_translation(Position::new(0.0, 1.0, 0.0))),
+    ];
 
     let shader_path = std::env::current_dir()
         .unwrap()

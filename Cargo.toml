@@ -9,4 +9,5 @@ edition = "2021"
 cgmath="*"
 rand="*"
 image="*"
+rayon="*"
 vk_utils={git = "https://github.com/DannyvanSwieten/vk_utils.git"}

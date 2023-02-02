@@ -8,12 +8,10 @@ use vk_utils::{
 use crate::{
     bvh::Node,
     gpu_blas::GpuInstanceProxy,
-    top_level_acceleration_structure::Instance,
     types::{Mat4, AABB},
 };
 
 pub struct GpuTlas {
-    device: Rc<DeviceContext>,
     pub tlas_buffer: BufferResource,
     pub instance_buffer: BufferResource,
 }
@@ -21,7 +19,7 @@ pub struct GpuTlas {
 #[repr(C)]
 struct GpuInstance {
     blas: u64,
-    instance_id: u32,
+    instance_id: u64,
     transform: Mat4,
 }
 
@@ -38,7 +36,7 @@ impl GpuTlas {
             .iter()
             .map(|proxy| GpuInstance {
                 blas: proxy.blas.address(),
-                instance_id: proxy.instance_id,
+                instance_id: proxy.instance_id as u64,
                 transform: proxy.transform,
             })
             .collect();
@@ -66,7 +64,6 @@ impl GpuTlas {
         tlas_buffer.upload(&nodes);
 
         Self {
-            device: device.clone(),
             tlas_buffer,
             instance_buffer,
         }
