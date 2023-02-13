@@ -4,6 +4,7 @@ struct Ray
 {
     vec3 origin;
     vec3 direction;
+    vec3 inv_direction;
 };
 
 layout(std430, set = 0, binding = 0) writeonly buffer RayBuffer {
@@ -18,11 +19,3 @@ void main()
     rays[i] = generate_ray(gl_GlobalInvocationID.xy, gl_NumWorkGroups.xy);
 }
 
-layout( push_constant ) uniform constants {
-    mat4 inverse_view;
-    mat4 inverse_projection;
-} CameraConstants;
-
-Ray generate_ray(vec2 pixel, vec2 resolution){
-    return Ray(vec3(0), vec3(1));
-}

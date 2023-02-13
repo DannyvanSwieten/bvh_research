@@ -94,7 +94,9 @@ impl Default for AABB {
     }
 }
 
+#[repr(C)]
 #[derive(Clone, Copy)]
+#[repr(align(16))]
 pub struct Ray {
     pub origin: Origin,
     pub direction: Direction,

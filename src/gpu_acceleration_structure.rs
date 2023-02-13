@@ -8,7 +8,6 @@ use vk_utils::{
 use crate::{
     blas::Instance,
     bvh::Node,
-    gpu_blas::GpuInstanceProxy,
     types::{Mat4, AABB},
 };
 
