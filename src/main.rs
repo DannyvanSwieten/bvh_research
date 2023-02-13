@@ -1,20 +1,22 @@
+pub mod blas;
 pub mod bvh;
 pub mod camera;
+pub mod cube;
 pub mod frame_buffer;
 pub mod gpu_acceleration_structure;
 pub mod gpu_blas;
+pub mod gpu_intersector;
 pub mod intersect;
-pub mod mesh;
 pub mod ray_generator;
 pub mod top_level_acceleration_structure;
 pub mod trace;
 pub mod types;
 
-use std::{collections::HashMap, io::BufRead, rc::Rc, time::Instant};
+use std::{collections::HashMap, io::BufRead, mem::size_of, rc::Rc, time::Instant};
 
 use cgmath::Matrix4;
 use image::ColorType;
-use types::{Triangle, Vertex};
+use types::Vertex;
 use vk_utils::{
     buffer_resource::BufferResource, command_buffer::CommandBuffer,
     image2d_resource::Image2DResource, pipeline_descriptor::ComputePipeline, queue::CommandQueue,
@@ -24,6 +26,7 @@ use vk_utils::{
 };
 
 use crate::{
+    blas::Blas,
     bvh::Bvh,
     camera::Camera,
     frame_buffer::Framebuffer,
@@ -34,7 +37,7 @@ use crate::{
     types::{HdrColor, Mat4, Position},
 };
 
-fn read_triangle_file(name: &str) -> (Vec<Vertex>, Vec<Triangle>) {
+fn read_triangle_file(name: &str) -> (Vec<Vertex>, Vec<u32>) {
     let path = std::env::current_dir()
         .unwrap()
         .to_str()
@@ -89,11 +92,9 @@ fn read_triangle_file(name: &str) -> (Vec<Vertex>, Vec<Triangle>) {
     }
 
     for i in (0..vertices.len()).step_by(3) {
-        triangles.push(Triangle {
-            v0: i as u32,
-            v1: i as u32 + 1,
-            v2: i as u32 + 2,
-        });
+        triangles.push(i as u32);
+        triangles.push(i as u32 + 1);
+        triangles.push(i as u32 + 2);
     }
 
     (vertices, triangles)
@@ -121,12 +122,12 @@ pub fn write_framebuffer_to_file(name: &str, framebuffer: &Framebuffer<HdrColor>
 }
 
 fn main() {
-    let (vertices, triangles) = read_triangle_file("unity.tri");
+    let (vertices, indices) = read_triangle_file("unity.tri");
     let mut framebuffer = Framebuffer::new(640, 640, HdrColor::new(0.0, 0.0, 0.0, 0.0));
     let camera = Camera::new(Position::new(-5.0, 0.0, -15.0), 2.0);
     let tracer = CpuTracer {};
 
-    let midpoint_split_acc = Rc::new(Bvh::new(&vertices, &triangles, true));
+    let midpoint_split_acc = Rc::new(Bvh::new(&vertices, &indices));
 
     let instances = [Instance::new(
         midpoint_split_acc.clone(),
@@ -181,13 +182,24 @@ fn main() {
     };
 
     let logical_device = Rc::new(logical_device);
-    let object = Rc::new(GpuBlas::new(
+    let vertex_buffer = BufferResource::new_host_visible_storage(
         logical_device.clone(),
-        midpoint_split_acc.clone(),
+        size_of::<Vertex>() * vertices.len(),
+    )
+    .with_data(&vertices);
+    let index_buffer = BufferResource::new_host_visible_storage(
+        logical_device.clone(),
+        size_of::<u32>() * vertices.len(),
+    )
+    .with_data(&indices);
+    let blas = Rc::new(Blas::new(
+        logical_device.clone(),
+        &vertex_buffer,
+        &index_buffer,
     ));
     let gpu_instances = [
-        GpuInstanceProxy::new(object.clone(), 0),
-        GpuInstanceProxy::new(object.clone(), 1)
+        blas::Instance::new(blas.clone(), 0),
+        blas::Instance::new(blas.clone(), 1)
             .with_transform(Mat4::from_translation(Position::new(0.0, 1.0, 0.0))),
     ];
 
@@ -207,26 +219,9 @@ fn main() {
         .descriptor_type(DescriptorType::STORAGE_BUFFER)
         .stage_flags(ShaderStageFlags::COMPUTE)
         .build();
-    let vertex_buffer_layout_binding = DescriptorSetLayoutBinding::builder()
-        .binding(2)
-        .descriptor_count(1)
-        .descriptor_type(DescriptorType::STORAGE_BUFFER)
-        .stage_flags(ShaderStageFlags::COMPUTE)
-        .build();
-    let index_buffer_layout_binding = DescriptorSetLayoutBinding::builder()
-        .binding(3)
-        .descriptor_count(1)
-        .descriptor_type(DescriptorType::STORAGE_BUFFER)
-        .stage_flags(ShaderStageFlags::COMPUTE)
-        .build();
     explicit_bindings.insert(
         0,
-        vec![
-            tlas_buffer_layout_binding,
-            instance_buffer_layout_binding,
-            vertex_buffer_layout_binding,
-            index_buffer_layout_binding,
-        ],
+        vec![tlas_buffer_layout_binding, instance_buffer_layout_binding],
     );
     let pipeline = ComputePipeline::new_from_source_file(
         shader_path.as_path(),
@@ -239,27 +234,6 @@ fn main() {
         let gpu_tlas = GpuTlas::new(logical_device.clone(), &gpu_instances);
         pipeline.set_storage_buffer(0, 0, &gpu_tlas.tlas_buffer);
         pipeline.set_storage_buffer(0, 1, &gpu_tlas.instance_buffer);
-
-        let vertex_buffer_size = std::mem::size_of::<Vertex>() * vertices.len();
-        let mut vertex_buffer = BufferResource::new(
-            logical_device.clone(),
-            vertex_buffer_size as _,
-            MemoryPropertyFlags::HOST_VISIBLE,
-            BufferUsageFlags::STORAGE_BUFFER,
-        );
-        vertex_buffer.upload(&vertices);
-        pipeline.set_storage_buffer(0, 2, &vertex_buffer);
-
-        let index_buffer_size =
-            std::mem::size_of::<Triangle>() * midpoint_split_acc.triangles().len();
-        let mut index_buffer = BufferResource::new(
-            logical_device.clone(),
-            index_buffer_size as _,
-            MemoryPropertyFlags::HOST_VISIBLE,
-            BufferUsageFlags::STORAGE_BUFFER,
-        );
-        index_buffer.upload(midpoint_split_acc.triangles());
-        pipeline.set_storage_buffer(0, 3, &index_buffer);
 
         let mut image = Image2DResource::new(
             logical_device.clone(),
@@ -277,7 +251,7 @@ fn main() {
         let mut command_buffer = CommandBuffer::new(queue.clone());
         command_buffer.begin();
         command_buffer.image_resource_transition(&mut image, ImageLayout::GENERAL);
-        pipeline.set_storage_image(0, 4, &image);
+        pipeline.set_storage_image(0, 3, &image);
         command_buffer.bind_compute_pipeline(&pipeline);
         let now = Instant::now();
         command_buffer.dispatch_compute(640, 640, 1);
@@ -290,7 +264,7 @@ fn main() {
 
         let buffer_size = 4 * 640 * 640;
         let mut image_buffer = BufferResource::new(
-            logical_device.clone(),
+            logical_device,
             buffer_size,
             MemoryPropertyFlags::HOST_VISIBLE,
             BufferUsageFlags::TRANSFER_DST,

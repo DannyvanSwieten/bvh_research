@@ -20,6 +20,7 @@ pub struct Triangle {
     pub v1: u32,
     pub v2: u32,
 }
+#[derive(Clone, Copy)]
 #[repr(C)]
 pub struct AABB {
     pub min: Vec3,
@@ -124,6 +125,7 @@ impl Ray {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct HitRecord {
     pub t: f32,
     pub u: f32,

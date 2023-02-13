@@ -52,3 +52,6 @@ impl<P: Clone + std::ops::AddAssign> Framebuffer<P> {
         self.pixels.iter()
     }
 }
+
+unsafe impl<P: Clone + std::ops::AddAssign> Send for Framebuffer<P> {}
+unsafe impl<P: Clone + std::ops::AddAssign> Sync for Framebuffer<P> {}

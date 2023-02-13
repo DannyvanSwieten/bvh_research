@@ -2,6 +2,7 @@
 #extension GL_EXT_nonuniform_qualifier: require
 #extension GL_EXT_scalar_block_layout: require
 #extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int32 : require
 #extension GL_EXT_buffer_reference2 : require
 
 struct Node{
@@ -27,27 +28,34 @@ struct Instance{
     mat4 transform;
 };
 
-layout(buffer_reference, scalar) readonly buffer BlasRef{
+layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer BlasRef{
+    uint64_t vertex_buffer;
+    uint64_t index_buffer;
+    uint64_t triangle_buffer;
     Node nodes[];
+};
+
+layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer Vertices{
+    vec4 v;
+};
+
+layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer Indices{
+    uint32_t i;
+};
+
+layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer Triangles{
+    uint32_t t;
 };
 
 layout(scalar, set = 0, binding = 0) readonly buffer TopLevelBvh{
     Node tlas[];
 };
 
-layout(scalar, buffer_reference_align = 4, set = 0, binding = 1) readonly buffer InstanceBuffer {
+layout(scalar, set = 0, binding = 1) readonly buffer InstanceBuffer {
     Instance instances[];
 };
 
-layout(std430, set = 0, binding = 2) readonly buffer VertexBuffer{
-    vec3 vertices[];
-};
-
-layout(std430, set = 0, binding = 3) readonly buffer IndexBuffer{
-    ivec3 indices[];
-};
-
-layout(set = 0, binding = 4, rgba8) uniform image2D output_buffer;
+layout(set = 0, binding = 3, rgba8) uniform image2D output_buffer;
 
 #define FLOAT_MAX 100000
 
@@ -129,10 +137,9 @@ float traverse_top_level(Ray ray, inout float u, inout float v)
     uint stack[64];
     float d = FLOAT_MAX;
     while(true) {
-        Node node = tlas[node_idx];
         if (tlas[node_idx].primitive_count > 0) {
-            uint first = node.first_primitive;
-            uint last = first + node.primitive_count;
+            uint first = tlas[node_idx].first_primitive;
+            uint last = first + tlas[node_idx].primitive_count;
             for (uint p = first; p < last; ++p) {
                 float lu, lv;
                 float dl = traverse_bttm_level(ray, p, lu, lv);
@@ -152,7 +159,7 @@ float traverse_top_level(Ray ray, inout float u, inout float v)
             }
         }
 
-        uint left_child_idx = node.first_primitive ;
+        uint left_child_idx = tlas[node_idx].first_primitive ;
         uint right_child_idx = left_child_idx + 1;
         Node left_child = tlas[left_child_idx];
         Node right_child = tlas[right_child_idx];
@@ -194,6 +201,11 @@ float traverse_bttm_level(Ray ray, uint instance_id, inout float u, inout float 
 {
     Instance instance = instances[instance_id];
     BlasRef blas_ref = BlasRef(instance.blas_address);
+
+    Indices indices = Indices(blas_ref.index_buffer);
+    Vertices vertices = Vertices(blas_ref.vertex_buffer);
+    Triangles triangles = Triangles(blas_ref.triangle_buffer);
+
     uint node_idx = 0;
     uint stack_ptr = 0;
     uint stack[64];
@@ -210,13 +222,16 @@ float traverse_bttm_level(Ray ray, uint instance_id, inout float u, inout float 
             uint first = node.first_primitive;
             uint last = first + node.primitive_count;
             for (uint p = first; p < last; ++p) {
-                ivec3 triangle = indices[p];
+                uint32_t triangle = triangles[p].t;
+                uint32_t i0 = indices[triangle].i;
+                uint32_t i1 = indices[triangle + 1].i;
+                uint32_t i2 = indices[triangle + 2].i;
                 float lu, lv;
                 float dl = intersect_triangle(
                     rayInv,
-                    vertices[triangle.x ].xyz,
-                    vertices[triangle.y ].xyz,
-                    vertices[triangle.z ].xyz,
+                    vertices[i0].v.xyz,
+                    vertices[i1 ].v.xyz,
+                    vertices[i2].v.xyz,
                     lu, lv
                 );
 
@@ -285,7 +300,7 @@ Ray create_ray(vec2 resolution, vec2 frag_location, vec3 origin, float z){
 }
 
 void main(){
-    Ray ray = create_ray(vec2(640, 640), vec2(gl_GlobalInvocationID.xy), vec3(-5, 0, -15), 2);
+    Ray ray = create_ray(vec2(640, 640), vec2(gl_GlobalInvocationID.xy), vec3(-8, 0, -25), 2);
     float u, v;
     float d = traverse_top_level(ray, u, v);
     if(d < FLOAT_MAX)

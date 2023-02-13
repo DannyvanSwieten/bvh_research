@@ -2,21 +2,27 @@
 
 struct Ray
 {
-    vec4 origin;
-    vec4 direction;
-    vec4 color;
+    vec3 origin;
+    vec3 direction;
 };
 
-layout(std430, set = 0, binding = 0) buffer RayBuffer {
-    Ray data[];
-} Rays;
+layout(std430, set = 0, binding = 0) writeonly buffer RayBuffer {
+    Ray rays[];
+};
+
+Ray generate_ray(vec2 pixel, vec2 resolution);
+
+void main()
+{
+    uint i = gl_GlobalInvocationID.y * gl_NumWorkGroups.x + gl_GlobalInvocationID.x;
+    rays[i] = generate_ray(gl_GlobalInvocationID.xy, gl_NumWorkGroups.xy);
+}
 
 layout( push_constant ) uniform constants {
     mat4 inverse_view;
     mat4 inverse_projection;
 } CameraConstants;
 
-void main()
-{
-
+Ray generate_ray(vec2 pixel, vec2 resolution){
+    return Ray(vec3(0), vec3(1));
 }

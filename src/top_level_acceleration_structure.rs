@@ -160,6 +160,7 @@ impl TopLevelAccelerationStructure {
                         record.obj_to_world = *transform;
                     }
                 }
+
                 if stack_ptr == 0 {
                     break;
                 } else {

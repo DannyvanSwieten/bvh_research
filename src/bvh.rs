@@ -2,7 +2,7 @@ use cgmath::SquareMatrix;
 
 use crate::{
     intersect::{intersect_aabb, intersect_triangle},
-    types::{vec4_to_3, HitRecord, Mat4, Ray, Triangle, Vec3, Vertex, AABB},
+    types::{vec4_to_3, HitRecord, Mat4, Ray, Vec3, Vertex, AABB},
 };
 #[repr(C)]
 pub struct Node {
@@ -25,44 +25,47 @@ impl Default for Node {
 }
 pub struct Bvh {
     vertices: Vec<Vertex>,
-    triangles: Vec<Triangle>,
+    triangles: Vec<u32>,
+    indices: Vec<u32>,
     nodes: Vec<Node>,
-    used_nodes: usize,
-    use_sah: bool,
 }
 
 impl Bvh {
-    pub fn new(vertices: &[Vertex], triangles: &[Triangle], use_sah: bool) -> Self {
+    pub fn new(vertices: &[Vertex], indices: &[u32]) -> Self {
         // Initialize all nodes to default
+        let mut centroids = Vec::new();
         let mut nodes = Vec::new();
-        for _ in 0..triangles.len() * 2 {
-            nodes.push(Node::default())
+        let mut triangle_indices = Vec::new();
+
+        for i in (0..indices.len()).step_by(3) {
+            triangle_indices.push(i as u32);
+            nodes.extend([Node::default(), Node::default()].into_iter());
+            let c = vertices[indices[i] as usize]
+                + vertices[indices[i + 1] as usize]
+                + vertices[indices[i + 2] as usize];
+            centroids.push(Vec3::new(c.x, c.y, c.z) / 3.0)
         }
 
         // Root node contains all primitives
-        nodes[0].primitive_count = triangles.len() as u32;
+        nodes[0].primitive_count = triangle_indices.len() as u32;
 
-        let mut centroids: Vec<Vec3> = triangles
-            .iter()
-            .map(|triangle| {
-                let c = (vertices[triangle.v0 as usize]
-                    + vertices[triangle.v1 as usize]
-                    + vertices[triangle.v2 as usize])
-                    / 3.0;
-                Vec3::new(c.x, c.y, c.z)
-            })
-            .collect();
-
-        let mut this = Self {
+        let mut used_nodes = 1;
+        Self::update_bounds(vertices, &triangle_indices, indices, &mut nodes, 0);
+        Self::subdivide(
+            &mut nodes,
+            0,
+            vertices,
+            &mut triangle_indices,
+            indices,
+            &centroids,
+            &mut used_nodes,
+        );
+        Self {
             nodes,
             vertices: vertices.to_vec(),
-            triangles: triangles.to_vec(),
-            used_nodes: 1,
-            use_sah,
-        };
-        this.update_bounds(0);
-        this.subdivide(0, &mut centroids);
-        this
+            indices: indices.to_vec(),
+            triangles: triangle_indices,
+        }
     }
 
     pub fn aabb(&self) -> &AABB {
@@ -73,44 +76,46 @@ impl Bvh {
         &self.nodes
     }
 
-    pub fn triangles(&self) -> &[Triangle] {
+    pub fn triangles(&self) -> &[u32] {
         &self.triangles
     }
 
-    fn update_bounds(&mut self, idx: usize) {
-        let mut node = &mut self.nodes[idx];
+    pub fn indices(&self) -> &[u32] {
+        &self.indices
+    }
+
+    fn update_bounds(
+        vertices: &[Vertex],
+        triangle_indices: &[u32],
+        vertex_indices: &[u32],
+        nodes: &mut [Node],
+        idx: usize,
+    ) {
+        let mut node = &mut nodes[idx];
         let first = node.first_primitive as usize;
         let last = first + node.primitive_count as usize;
-        for i in first..last as usize {
-            node.aabb.min = crate::types::min(
-                &node.aabb.min,
-                &vec4_to_3(self.vertices[self.triangles[i].v0 as usize]),
-            );
-            node.aabb.min = crate::types::min(
-                &node.aabb.min,
-                &vec4_to_3(self.vertices[self.triangles[i].v1 as usize]),
-            );
-            node.aabb.min = crate::types::min(
-                &node.aabb.min,
-                &vec4_to_3(self.vertices[self.triangles[i].v2 as usize]),
-            );
+        for i in first..last {
+            let t = triangle_indices[i] as usize;
+            let v0 = vertex_indices[t] as usize;
+            let v1 = vertex_indices[t + 1] as usize;
+            let v2 = vertex_indices[t + 2] as usize;
+            node.aabb.min = crate::types::min(&node.aabb.min, &vec4_to_3(vertices[v0]));
+            node.aabb.min = crate::types::min(&node.aabb.min, &vec4_to_3(vertices[v1]));
+            node.aabb.min = crate::types::min(&node.aabb.min, &vec4_to_3(vertices[v2]));
 
-            node.aabb.max = crate::types::max(
-                &node.aabb.max,
-                &vec4_to_3(self.vertices[self.triangles[i].v0 as usize]),
-            );
-            node.aabb.max = crate::types::max(
-                &node.aabb.max,
-                &vec4_to_3(self.vertices[self.triangles[i].v1 as usize]),
-            );
-            node.aabb.max = crate::types::max(
-                &node.aabb.max,
-                &vec4_to_3(self.vertices[self.triangles[i].v2 as usize]),
-            );
+            node.aabb.max = crate::types::max(&node.aabb.max, &vec4_to_3(vertices[v0]));
+            node.aabb.max = crate::types::max(&node.aabb.max, &vec4_to_3(vertices[v1]));
+            node.aabb.max = crate::types::max(&node.aabb.max, &vec4_to_3(vertices[v2]));
         }
     }
 
-    fn find_split_axis(&self, node: &Node, centroids: &[Vec3]) -> (usize, f32, f32) {
+    fn find_split_axis(
+        node: &Node,
+        vertices: &[Vertex],
+        triangle_indices: &[u32],
+        vertex_indices: &[u32],
+        centroids: &[Vec3],
+    ) -> (usize, f32, f32) {
         let mut best_axis = 0;
         let mut best_position = 0.0;
         let mut best_cost = f32::MAX;
@@ -126,7 +131,15 @@ impl Bvh {
             let scale = extent[axis] / bins as f32;
             for i in 0..bins {
                 let candidate = min + i as f32 * scale;
-                let cost = self.evaluate_sah(node, centroids, axis, candidate);
+                let cost = Self::evaluate_sah(
+                    node,
+                    vertices,
+                    triangle_indices,
+                    vertex_indices,
+                    centroids,
+                    axis,
+                    candidate,
+                );
                 if cost < best_cost {
                     best_position = candidate;
                     best_axis = axis;
@@ -138,34 +151,32 @@ impl Bvh {
         (best_axis, best_position, best_cost)
     }
 
-    fn subdivide(&mut self, idx: usize, centroids: &mut [Vec3]) {
-        let node = &self.nodes[idx];
-
-        let (axis, split) = if !self.use_sah {
-            let extent = node.aabb.extent();
-            let axis = node.aabb.dominant_axis();
-            let split = node.aabb.min[axis] + extent[axis] * 0.5;
-            (axis, split)
-        } else {
-            let (axis, split, cost) = self.find_split_axis(node, centroids);
-            let parent_area = node.aabb.area();
-            let parent_cost = node.primitive_count as f32 * parent_area;
-            // Only split if costs are higher or equal to parent
-            if cost >= parent_cost {
-                return;
-            } else {
-                (axis, split)
-            }
-        };
+    fn subdivide(
+        nodes: &mut [Node],
+        idx: usize,
+        vertices: &[Vertex],
+        triangle_indices: &mut [u32],
+        vertex_indices: &[u32],
+        centroids: &[Vec3],
+        used_nodes: &mut usize,
+    ) {
+        let node = &nodes[idx];
+        let (axis, split, cost) =
+            Self::find_split_axis(node, vertices, triangle_indices, vertex_indices, centroids);
+        let parent_area = node.aabb.area();
+        let parent_cost = node.primitive_count as f32 * parent_area;
+        // Only split if costs are lower or equal to parent
+        if cost >= parent_cost {
+            return;
+        }
 
         let mut i = node.first_primitive as i64;
         let mut j = i + node.primitive_count as i64 - 1;
         while i <= j {
-            if centroids[i as usize][axis] < split {
+            if centroids[triangle_indices[i as usize] as usize / 3][axis] < split {
                 i += 1;
             } else {
-                self.triangles.swap(i as usize, j as usize);
-                centroids.swap(i as usize, j as usize);
+                triangle_indices.swap(i as usize, j as usize);
                 j -= 1;
             }
         }
@@ -175,25 +186,60 @@ impl Bvh {
             return;
         }
 
-        let left_child_index = self.used_nodes;
-        self.used_nodes += 1;
-        let right_child_index = self.used_nodes;
-        self.used_nodes += 1;
-        self.nodes[left_child_index].first_primitive = self.nodes[idx].first_primitive;
-        self.nodes[left_child_index].primitive_count = left_count as u32;
-        self.nodes[right_child_index].first_primitive = i as u32;
-        self.nodes[right_child_index].primitive_count =
-            self.nodes[idx].primitive_count - left_count as u32;
-        self.nodes[idx].first_primitive = left_child_index as u32;
-        self.nodes[idx].primitive_count = 0;
+        let left_child_index = *used_nodes;
+        *used_nodes += 1;
+        let right_child_index = *used_nodes;
+        *used_nodes += 1;
+        nodes[left_child_index].first_primitive = nodes[idx].first_primitive;
+        nodes[left_child_index].primitive_count = left_count as u32;
+        nodes[right_child_index].first_primitive = i as u32;
+        nodes[right_child_index].primitive_count = nodes[idx].primitive_count - left_count as u32;
+        nodes[idx].first_primitive = left_child_index as u32;
+        nodes[idx].primitive_count = 0;
 
-        self.update_bounds(left_child_index);
-        self.update_bounds(right_child_index);
-        self.subdivide(left_child_index, centroids);
-        self.subdivide(right_child_index, centroids);
+        Self::update_bounds(
+            vertices,
+            triangle_indices,
+            vertex_indices,
+            nodes,
+            left_child_index,
+        );
+        Self::update_bounds(
+            vertices,
+            triangle_indices,
+            vertex_indices,
+            nodes,
+            right_child_index,
+        );
+        Self::subdivide(
+            nodes,
+            left_child_index,
+            vertices,
+            triangle_indices,
+            vertex_indices,
+            centroids,
+            used_nodes,
+        );
+        Self::subdivide(
+            nodes,
+            right_child_index,
+            vertices,
+            triangle_indices,
+            vertex_indices,
+            centroids,
+            used_nodes,
+        );
     }
 
-    fn evaluate_sah(&self, node: &Node, centroids: &[Vec3], axis: usize, position: f32) -> f32 {
+    fn evaluate_sah(
+        node: &Node,
+        vertices: &[Vertex],
+        triangle_indices: &[u32],
+        vertex_indices: &[u32],
+        centroids: &[Vec3],
+        axis: usize,
+        position: f32,
+    ) -> f32 {
         let mut left_box = AABB::default();
         let mut right_box = AABB::default();
 
@@ -203,18 +249,26 @@ impl Bvh {
         let first = node.first_primitive as usize;
         let count = node.primitive_count as usize;
 
-        for (i, centroid) in centroids.iter().enumerate().skip(first).take(count) {
-            let triangle = &self.triangles[i];
+        for i in first..first + count {
+            let t = triangle_indices[i] as usize;
+            let i0 = vertex_indices[t] as usize;
+            let i1 = vertex_indices[t + 1] as usize;
+            let i2 = vertex_indices[t + 2] as usize;
+            let centroid = &centroids[t / 3];
+            let v0 = vertices[i0];
+            let v1 = vertices[i1];
+            let v2 = vertices[i2];
+
             if centroid[axis] < position {
                 left_count += 1;
-                left_box.grow_with_position(&vec4_to_3(self.vertices[triangle.v0 as usize]));
-                left_box.grow_with_position(&vec4_to_3(self.vertices[triangle.v1 as usize]));
-                left_box.grow_with_position(&vec4_to_3(self.vertices[triangle.v2 as usize]));
+                left_box.grow_with_position(&vec4_to_3(v0));
+                left_box.grow_with_position(&vec4_to_3(v1));
+                left_box.grow_with_position(&vec4_to_3(v2));
             } else {
                 right_count += 1;
-                right_box.grow_with_position(&vec4_to_3(self.vertices[triangle.v0 as usize]));
-                right_box.grow_with_position(&vec4_to_3(self.vertices[triangle.v1 as usize]));
-                right_box.grow_with_position(&vec4_to_3(self.vertices[triangle.v2 as usize]));
+                right_box.grow_with_position(&vec4_to_3(v0));
+                right_box.grow_with_position(&vec4_to_3(v1));
+                right_box.grow_with_position(&vec4_to_3(v2));
             }
         }
 
@@ -226,8 +280,8 @@ impl Bvh {
         }
     }
 
-    pub fn size(&self) -> u64 {
-        std::mem::size_of::<Node>() as u64 * self.nodes.len() as u64
+    pub fn size(&self) -> usize {
+        std::mem::size_of::<Node>() * self.nodes.len()
     }
 
     pub fn traverse(&self, ray: &Ray, transform: &Mat4, hit_record: &mut HitRecord) {
@@ -245,11 +299,16 @@ impl Bvh {
                     let mut t = 0.0;
                     let mut u = 0.0;
                     let mut v = 0.0;
+
+                    let triangle = *p as usize;
+                    let v0 = self.indices[triangle];
+                    let v1 = self.indices[triangle + 1];
+                    let v2 = self.indices[triangle + 2];
                     let hit = intersect_triangle(
                         &inv_ray,
-                        &self.vertices[p.v0 as usize],
-                        &self.vertices[p.v1 as usize],
-                        &self.vertices[p.v2 as usize],
+                        &self.vertices[v0 as usize],
+                        &self.vertices[v1 as usize],
+                        &self.vertices[v2 as usize],
                         &mut t,
                         &mut u,
                         &mut v,
@@ -278,15 +337,7 @@ impl Bvh {
             let right_child = &self.nodes[right_child_idx];
             let mut left_distance = intersect_aabb(&left_child.aabb, &inv_ray, f32::MAX);
             let mut right_distance = intersect_aabb(&right_child.aabb, &inv_ray, f32::MAX);
-            // if left_distance > hit_record.t || right_distance > hit_record.t {
-            //     if stack_ptr == 0 {
-            //         break;
-            //     } else {
-            //         stack_ptr -= 1;
-            //         node_idx = stack[stack_ptr];
-            //         continue;
-            //     }
-            // }
+
             if left_distance > right_distance {
                 std::mem::swap(&mut left_child_idx, &mut right_child_idx);
                 std::mem::swap(&mut left_distance, &mut right_distance);

@@ -6,6 +6,7 @@ use vk_utils::{
 };
 
 use crate::{
+    blas::Instance,
     bvh::Node,
     gpu_blas::GpuInstanceProxy,
     types::{Mat4, AABB},
@@ -24,20 +25,20 @@ struct GpuInstance {
 }
 
 impl GpuTlas {
-    pub fn new(device: Rc<DeviceContext>, proxies: &[GpuInstanceProxy]) -> Self {
+    pub fn new(device: Rc<DeviceContext>, proxies: &[Instance]) -> Self {
         let mut nodes = Vec::new();
         let mut boxes = Vec::new();
         for instance in proxies {
             nodes.push(Node::default());
-            boxes.push(instance.blas.bvh.aabb().transformed(&instance.transform))
+            boxes.push(instance.blas().aabb().transformed(&instance.transform()))
         }
 
         let mut instances: Vec<GpuInstance> = proxies
             .iter()
             .map(|proxy| GpuInstance {
-                blas: proxy.blas.address(),
-                instance_id: proxy.instance_id as u64,
-                transform: proxy.transform,
+                blas: proxy.blas().address(),
+                instance_id: proxy.id() as u64,
+                transform: *proxy.transform(),
             })
             .collect();
 
@@ -48,7 +49,7 @@ impl GpuTlas {
 
         let mut instance_buffer = BufferResource::new(
             device.clone(),
-            std::mem::size_of::<GpuInstance>() as u64 * proxies.len() as u64,
+            std::mem::size_of::<Instance>() * proxies.len(),
             MemoryPropertyFlags::HOST_VISIBLE,
             BufferUsageFlags::STORAGE_BUFFER,
         );
@@ -56,7 +57,7 @@ impl GpuTlas {
 
         let mut tlas_buffer = BufferResource::new(
             device.clone(),
-            size_of::<Node>() as u64 * nodes.len() as u64,
+            size_of::<Node>() * nodes.len(),
             MemoryPropertyFlags::HOST_VISIBLE,
             BufferUsageFlags::STORAGE_BUFFER,
         );

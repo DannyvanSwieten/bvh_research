@@ -1,11 +1,11 @@
+use crossbeam::channel::unbounded;
 use rayon::prelude::*;
-use std::sync::mpsc;
 
 use crate::{
     camera::Camera,
     frame_buffer::Framebuffer,
     top_level_acceleration_structure::TopLevelAccelerationStructure,
-    types::{HdrColor, Ray},
+    types::{HdrColor, HitRecord, Ray},
 };
 
 pub trait Tracer {
@@ -43,33 +43,29 @@ impl Tracer for CpuTracer {
         //     }
         // }
 
-        (0..height).into_par_iter().for_each(|y| {
+        let (tx, rx) = unbounded();
+
+        (0..height).into_par_iter().for_each_with(tx, |tx, y| {
             let mut row = Vec::with_capacity(width);
             for x in 0..width {
                 let ray = camera.ray(x, y, width, height);
+
                 let record = acceleration_structure.traverse(&ray);
-                if record.t < f32::MAX {
-                    // framebuffer.set_pixel(
-                    //     x,
-                    //     y,
-                    //     HdrColor::new(1.0 - record.u - record.v, record.u, record.v, 1.0),
-                    // );
-
-                    row.push(HdrColor::new(
-                        1.0 - record.u - record.v,
-                        record.u,
-                        record.v,
-                        1.0,
-                    ));
-                }
+                row.push(record);
             }
+            tx.send((y, row)).expect("send failed");
         });
+
+        for (row, data) in rx {
+            data.iter().enumerate().for_each(|(x, record)| {
+                if record.t < f32::MAX {
+                    framebuffer.set_pixel(
+                        x,
+                        row,
+                        HdrColor::new(1.0 - record.u - record.v, record.u, record.v, 1.0),
+                    )
+                }
+            });
+        }
     }
-    // }
-    // }
-    // });
-
-    // handle.join().unwrap();
-
-    // }
 }
