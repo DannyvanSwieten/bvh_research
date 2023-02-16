@@ -7,6 +7,7 @@ use gpu_tracer::{
     gpu_ray_intersector::GpuIntersector,
     read_triangle_file,
     types::Vertex,
+    write_intersection_buffer_to_file,
 };
 use vk_utils::{
     buffer_resource::BufferResource, queue::CommandQueue, vulkan::Vulkan, DebugUtils,
@@ -31,7 +32,7 @@ fn main() {
         Ray ray;
         ray.origin = origin;
         ray.direction = direction;
-        ray.inv_direction = 1.0 / direction;
+        ray.invDirection = 1.0 / direction;
         return ray;
     }
 
@@ -122,4 +123,6 @@ fn main() {
         .wait();
     let elapsed_time = now.elapsed();
     println!("Tracing GPU took {} millis.", elapsed_time.as_millis());
+
+    // write_intersection_buffer_to_file("gpu.png", &intersection_buffer.copy_data(), width, height);
 }

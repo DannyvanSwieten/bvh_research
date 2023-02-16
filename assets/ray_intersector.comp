@@ -5,6 +5,15 @@
 #extension GL_EXT_shader_explicit_arithmetic_types_int32 : require
 #extension GL_EXT_buffer_reference2 : require
 
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+struct Ray
+{
+    vec3 origin;
+    vec3 direction;
+    vec3 invDirection;
+};
+
 struct Node{
     float min_x;
     float min_y;
@@ -14,12 +23,6 @@ struct Node{
     float max_z;
     uint first_primitive;
     uint primitive_count;
-};
-
-struct Ray{
-    vec3 origin;
-    vec3 direction;
-    vec3 invDirection;
 };
 
 struct Instance{
@@ -292,7 +295,7 @@ float traverse_bttm_level(Ray ray, uint instance_id, inout float u, inout float 
 }
 
 void main(){
-    uint i = gl_GlobalInvocationID.y * gl_NumWorkGroups.x + gl_GlobalInvocationID.x;
+    uint i = gl_GlobalInvocationID.y * 720 + gl_GlobalInvocationID.x;
     Ray ray = rays[i];
     float u, v;
     float d = traverse_top_level(ray, u, v);

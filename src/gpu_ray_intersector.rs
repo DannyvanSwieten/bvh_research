@@ -83,7 +83,7 @@ impl GpuIntersector {
 
         command_buffer.begin();
         command_buffer.bind_compute_pipeline(&self.pipeline);
-        command_buffer.dispatch_compute(width as u32, height as u32, 1);
+        command_buffer.dispatch_compute(width as u32 / 8, height as u32 / 8, 1);
         command_buffer.submit()
     }
 

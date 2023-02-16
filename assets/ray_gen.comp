@@ -4,8 +4,10 @@ struct Ray
 {
     vec3 origin;
     vec3 direction;
-    vec3 inv_direction;
+    vec3 invDirection;
 };
+
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
 layout(std430, set = 0, binding = 0) writeonly buffer RayBuffer {
     Ray rays[];
@@ -15,7 +17,7 @@ Ray generate_ray(vec2 pixel, vec2 resolution);
 
 void main()
 {
-    uint i = gl_GlobalInvocationID.y * gl_NumWorkGroups.x + gl_GlobalInvocationID.x;
+    uint i = gl_GlobalInvocationID.y * 720 + gl_GlobalInvocationID.x;
     rays[i] = generate_ray(gl_GlobalInvocationID.xy, gl_NumWorkGroups.xy);
 }
 
