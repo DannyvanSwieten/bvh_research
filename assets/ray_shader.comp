@@ -1,0 +1,28 @@
+#version 460
+
+struct Ray
+{
+    vec3 origin;
+    vec3 direction;
+    vec3 invDirection;
+};
+
+struct Intersection{
+    vec3 tuv;
+    uvec3 ip;
+};
+
+layout(set = 0, binding = 0) buffer Rays {
+    Ray rays[];
+};
+
+layout(set = 0, binding = 1) buffer ShadowRays {
+    Ray shadow_rays[];
+};
+
+void shade(int ray_index, Intersection intersection);
+
+void main()
+{
+
+}
