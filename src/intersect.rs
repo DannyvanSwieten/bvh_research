@@ -21,9 +21,9 @@ pub fn intersect_aabb(aabb: &AABB, ray: &Ray, t_far: f32) -> f32 {
 
     let hit = t_max >= t_min && t_min < t_far && t_max > 0.0;
     if hit {
-        return t_min.min(t_max);
+        t_min.min(t_max)
     } else {
-        return f32::MAX;
+        f32::MAX
     }
 }
 

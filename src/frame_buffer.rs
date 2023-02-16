@@ -41,11 +41,9 @@ impl<P: Clone + std::ops::AddAssign> Framebuffer<P> {
     where
         F: Fn(usize, usize, &P),
     {
-        for y in 0..self.height as usize {
-            for x in 0..self.width as usize {
-                f(x, y, &self.pixels[y * self.width as usize + x])
-            }
-        }
+        (0..self.height).for_each(|y| {
+            (0..self.width).for_each(|x| f(x, y, &self.pixels[y * self.width + x]));
+        });
     }
 
     pub fn iter(&self) -> std::slice::Iter<'_, P> {

@@ -103,15 +103,17 @@ pub struct Ray {
     pub inv_direcion: Direction,
 }
 
-impl Ray {
-    pub fn default() -> Self {
+impl Default for Ray {
+    fn default() -> Self {
         Self {
             origin: Origin::new(0.0, 0.0, 0.0),
             direction: Direction::new(1.0, 1.0, 1.0),
             inv_direcion: Direction::new(1.0, 1.0, 1.0),
         }
     }
+}
 
+impl Ray {
     pub fn new(origin: Position, direction: Direction) -> Ray {
         Self {
             origin,

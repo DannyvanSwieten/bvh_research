@@ -29,7 +29,7 @@ impl GpuTlas {
         let mut boxes = Vec::new();
         for instance in proxies {
             nodes.push(Node::default());
-            boxes.push(instance.blas().aabb().transformed(&instance.transform()))
+            boxes.push(instance.blas().aabb().transformed(instance.transform()))
         }
 
         let mut instances: Vec<GpuInstance> = proxies
@@ -55,7 +55,7 @@ impl GpuTlas {
         instance_buffer.upload(&instances);
 
         let mut tlas_buffer = BufferResource::new(
-            device.clone(),
+            device,
             size_of::<Node>() * nodes.len(),
             MemoryPropertyFlags::HOST_VISIBLE,
             BufferUsageFlags::STORAGE_BUFFER,

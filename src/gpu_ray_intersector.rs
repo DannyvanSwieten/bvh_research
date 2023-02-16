@@ -14,7 +14,7 @@ pub struct GpuIntersector {
 }
 
 impl GpuIntersector {
-    pub fn new(queue: Rc<CommandQueue>, max_frames_in_flight: usize) -> Self {
+    pub fn new(queue: Rc<CommandQueue>, _max_frames_in_flight: usize) -> Self {
         let shader_path = std::env::current_dir()
             .unwrap()
             .join("./assets/ray_intersector.comp");
@@ -54,7 +54,7 @@ impl GpuIntersector {
         );
         let pipeline = ComputePipeline::new_from_source_file(
             shader_path.as_path(),
-            queue.device().clone(),
+            queue.device(),
             1,
             "main",
             Some(explicit_bindings),

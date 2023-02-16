@@ -13,9 +13,9 @@ use crate::{
 
 pub struct Blas {
     aabb: AABB,
-    vertex_buffer: u64,
-    index_buffer: u64,
-    triangle_buffer: BufferResource,
+    _vertex_buffer: u64,
+    _index_buffer: u64,
+    _triangle_buffer: BufferResource,
     blas_buffer: BufferResource,
 }
 
@@ -47,9 +47,9 @@ impl Blas {
 
         Self {
             aabb: *bvh.aabb(),
-            vertex_buffer: vertex_buffer.device_address(),
-            index_buffer: index_buffer.device_address(),
-            triangle_buffer,
+            _vertex_buffer: vertex_buffer.device_address(),
+            _index_buffer: index_buffer.device_address(),
+            _triangle_buffer: triangle_buffer,
             blas_buffer,
         }
     }

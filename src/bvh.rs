@@ -91,10 +91,10 @@ impl Bvh {
         nodes: &mut [Node],
         idx: usize,
     ) {
-        let mut node = &mut nodes[idx];
+        let node = &mut nodes[idx];
         let first = node.first_primitive as usize;
         let last = first + node.primitive_count as usize;
-        for i in first..last {
+        (first..last).for_each(|i| {
             let t = triangle_indices[i] as usize;
             let v0 = vertex_indices[t] as usize;
             let v1 = vertex_indices[t + 1] as usize;
@@ -106,7 +106,7 @@ impl Bvh {
             node.aabb.max = crate::types::max(&node.aabb.max, &vec4_to_3(vertices[v0]));
             node.aabb.max = crate::types::max(&node.aabb.max, &vec4_to_3(vertices[v1]));
             node.aabb.max = crate::types::max(&node.aabb.max, &vec4_to_3(vertices[v2]));
-        }
+        });
     }
 
     fn find_split_axis(
@@ -249,7 +249,7 @@ impl Bvh {
         let first = node.first_primitive as usize;
         let count = node.primitive_count as usize;
 
-        for i in first..first + count {
+        (first..first + count).for_each(|i| {
             let t = triangle_indices[i] as usize;
             let i0 = vertex_indices[t] as usize;
             let i1 = vertex_indices[t + 1] as usize;
@@ -270,7 +270,7 @@ impl Bvh {
                 right_box.grow_with_position(&vec4_to_3(v1));
                 right_box.grow_with_position(&vec4_to_3(v2));
             }
-        }
+        });
 
         let cost = left_count as f32 * left_box.area() + right_count as f32 * right_box.area();
         if cost > 0.0 {

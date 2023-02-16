@@ -30,7 +30,7 @@ impl GpuRayGenerator {
         let src = template_src + &ray_gen_src;
 
         let pipeline = ComputePipeline::new_from_source_string(
-            queue.device().clone(),
+            queue.device(),
             max_frames_in_flight,
             &src,
             "main",
@@ -54,10 +54,10 @@ impl GpuRayGenerator {
         let template_src = std::fs::read_to_string(template_path)
             .expect("Couldn't load Ray generator template file");
 
-        let src = template_src + &src;
+        let src = template_src + src;
 
         let pipeline = ComputePipeline::new_from_source_string(
-            queue.device().clone(),
+            queue.device(),
             max_frames_in_flight,
             &src,
             "main",

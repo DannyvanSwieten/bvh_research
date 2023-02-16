@@ -33,7 +33,7 @@ impl Default for TlasNode {
 #[derive(Clone)]
 pub struct Instance {
     pub blas: Rc<Bvh>,
-    id: u32,
+    _id: u32,
     transform: Matrix4<f32>,
 }
 
@@ -41,7 +41,7 @@ impl Instance {
     pub fn new(blas: Rc<Bvh>, id: u32, transform: Matrix4<f32>) -> Self {
         Self {
             blas,
-            id,
+            _id: id,
             transform,
         }
     }

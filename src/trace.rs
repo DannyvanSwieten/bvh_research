@@ -2,10 +2,8 @@ use crossbeam::channel::unbounded;
 use rayon::prelude::*;
 
 use crate::{
-    camera::Camera,
-    frame_buffer::Framebuffer,
-    top_level_acceleration_structure::TopLevelAccelerationStructure,
-    types::{HdrColor, HitRecord, Ray},
+    camera::Camera, frame_buffer::Framebuffer,
+    top_level_acceleration_structure::TopLevelAccelerationStructure, types::HdrColor,
 };
 
 pub trait Tracer {
