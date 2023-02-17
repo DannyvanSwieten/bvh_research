@@ -11,7 +11,7 @@ struct Ray
 {
     vec3 origin;
     vec3 direction;
-    vec3 invDirection;
+    vec3 color;
 };
 
 struct Node{
@@ -33,7 +33,7 @@ struct Instance{
 
 struct Intersection{
     vec3 tuv;
-    uvec3 ip;
+    uvec2 ip;
 };
 
 layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer BlasRef{
@@ -44,7 +44,7 @@ layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer Bla
 };
 
 layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer Vertices{
-    vec4 v;
+    vec3 v;
 };
 
 layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer Indices{
@@ -63,15 +63,15 @@ layout(scalar, set = 0, binding = 1) readonly buffer InstanceBuffer {
     Instance instances[];
 };
 
-layout(std430, set = 0, binding = 2) readonly buffer RayBuffer {
+layout(scalar, set = 0, binding = 2) readonly buffer RayBuffer {
     Ray rays[];
 };
 
-layout(std430, set = 0, binding = 3) writeonly buffer ResultBuffer {
+layout(scalar, set = 0, binding = 3) writeonly buffer ResultBuffer {
     Intersection results[];
 };
 
-#define FLOAT_MAX 100000
+#define FLOAT_MAX 10000
 
 void swap_int(inout uint a, inout uint b){
     uint tmp = a;
@@ -93,10 +93,10 @@ float min_element(vec3 v){
     return min(v.x, min(v.y, v.z));
 }
 
-float intersect_aabb(vec3 aabb_min, vec3 aabb_max, Ray ray, float t_far) {
+float intersect_aabb(vec3 aabb_min, vec3 aabb_max, vec3 origin, vec3 invDirection, float t_far) {
 
-    vec3 t_min = (aabb_min - ray.origin) * ray.invDirection;
-    vec3 t_max = (aabb_max - ray.origin) * ray.invDirection;
+    vec3 t_min = (aabb_min - origin) * invDirection;
+    vec3 t_max = (aabb_max - origin) * invDirection;
 
     vec3 t1 = min(t_min, t_max);
     vec3 t2 = max(t_min, t_max);
@@ -150,6 +150,7 @@ float traverse_top_level(Ray ray, inout float u, inout float v)
     uint stack_ptr = 0;
     uint stack[64];
     float d = FLOAT_MAX;
+    vec3 invDirection = 1.0 / ray.direction;
     while(true) {
         if (tlas[node_idx].primitive_count > 0) {
             uint first = tlas[node_idx].first_primitive;
@@ -177,8 +178,8 @@ float traverse_top_level(Ray ray, inout float u, inout float v)
         uint right_child_idx = left_child_idx + 1;
         Node left_child = tlas[left_child_idx];
         Node right_child = tlas[right_child_idx];
-        float left_distance = intersect_aabb(vec3(left_child.min_x, left_child.min_y, left_child.min_z), vec3(left_child.max_x, left_child.max_y, left_child.max_z), ray, FLOAT_MAX);
-        float right_distance = intersect_aabb( vec3(right_child.min_x, right_child.min_y, right_child.min_z), vec3(right_child.max_x, right_child.max_y, right_child.max_z), ray, FLOAT_MAX);
+        float left_distance = intersect_aabb(vec3(left_child.min_x, left_child.min_y, left_child.min_z), vec3(left_child.max_x, left_child.max_y, left_child.max_z), ray.origin, invDirection, FLOAT_MAX);
+        float right_distance = intersect_aabb(vec3(right_child.min_x, right_child.min_y, right_child.min_z), vec3(right_child.max_x, right_child.max_y, right_child.max_z), ray.origin, invDirection, FLOAT_MAX);
         if (left_distance > d || right_distance > d){
             if(stack_ptr == 0){
                 break;
@@ -228,7 +229,7 @@ float traverse_bttm_level(Ray ray, uint instance_id, inout float u, inout float 
     Ray rayInv;
     rayInv.origin = (inverse_transform * vec4(ray.origin, 1)).xyz;
     rayInv.direction = (inverse_transform * vec4(ray.direction, 0)).xyz;
-    rayInv.invDirection = 1.0 / rayInv.direction;
+    vec3 invDirection = 1.0 / rayInv.direction;
     
     while(true) {
         Node node = blas_ref.nodes[node_idx];
@@ -268,8 +269,8 @@ float traverse_bttm_level(Ray ray, uint instance_id, inout float u, inout float 
         uint right_child_idx = left_child_idx + 1;
         Node left_child = blas_ref.nodes[left_child_idx];
         Node right_child = blas_ref.nodes[right_child_idx];
-        float left_distance = intersect_aabb(vec3(left_child.min_x, left_child.min_y, left_child.min_z), vec3(left_child.max_x, left_child.max_y, left_child.max_z), rayInv, FLOAT_MAX);
-        float right_distance = intersect_aabb( vec3(right_child.min_x, right_child.min_y, right_child.min_z), vec3(right_child.max_x, right_child.max_y, right_child.max_z), rayInv, FLOAT_MAX);
+        float left_distance = intersect_aabb(vec3(left_child.min_x, left_child.min_y, left_child.min_z), vec3(left_child.max_x, left_child.max_y, left_child.max_z), rayInv.origin, invDirection, FLOAT_MAX);
+        float right_distance = intersect_aabb( vec3(right_child.min_x, right_child.min_y, right_child.min_z), vec3(right_child.max_x, right_child.max_y, right_child.max_z), rayInv.origin, invDirection, FLOAT_MAX);
 
         if (left_distance > right_distance) {
             swap_int(left_child_idx, right_child_idx);
@@ -299,5 +300,6 @@ void main(){
     Ray ray = rays[i];
     float u, v;
     float d = traverse_top_level(ray, u, v);
-    results[i] = Intersection(vec3(d, u, v), uvec3(0, 0, 0));
+
+    results[i] = Intersection(vec3(d, u, v), uvec2(0, 0));
 }

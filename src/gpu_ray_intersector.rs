@@ -113,12 +113,10 @@ impl GpuIntersector {
 
 #[repr(C)]
 #[derive(Clone, Copy)]
-#[repr(align(16))]
 pub struct IntersectionResult {
     pub t: f32,
     pub u: f32,
     pub v: f32,
     instance: u32,
     primitive: u32,
-    pad: u32,
 }

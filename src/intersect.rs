@@ -1,6 +1,6 @@
 use cgmath::InnerSpace;
 
-use crate::types::{vec4_to_3, Ray, Vertex, AABB};
+use crate::types::{Ray, Vertex, AABB};
 
 pub fn intersect_aabb(aabb: &AABB, ray: &Ray, t_far: f32) -> f32 {
     let tx1 = (aabb.min.x - ray.origin.x) * ray.inv_direcion.x;
@@ -36,8 +36,8 @@ pub fn intersect_triangle(
     u: &mut f32,
     v: &mut f32,
 ) -> bool {
-    let edge1 = vec4_to_3(*v1) - vec4_to_3(*v0);
-    let edge2 = vec4_to_3(*v2) - vec4_to_3(*v0);
+    let edge1 = *v1 - *v0;
+    let edge2 = *v2 - *v0;
     let h = ray.direction.cross(edge2);
     let a = edge1.dot(h);
     if a > -0.0001 && a < 0.0001 {
@@ -46,7 +46,7 @@ pub fn intersect_triangle(
     }
 
     let f = 1.0 / a;
-    let s = ray.origin - vec4_to_3(*v0);
+    let s = ray.origin - *v0;
     *u = f * s.dot(h);
     if !(0.0..=1.0).contains(u) {
         return false;

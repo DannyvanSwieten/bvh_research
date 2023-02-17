@@ -2,19 +2,14 @@ use cgmath::{InnerSpace, Matrix4, SquareMatrix, Vector3, Vector4};
 
 pub type Vec3 = Vector3<f32>;
 pub type Vec4 = Vector4<f32>;
-pub type Vertex = Vec4;
+pub type Vertex = Vec3;
 pub type Position = Vec3;
 pub type Direction = Vec3;
 pub type Origin = Vec3;
 pub type HdrColor = Vec4;
 pub type Mat4 = Matrix4<f32>;
 
-pub fn vec4_to_3(v: Vec4) -> Vec3 {
-    Vec3::new(v.x, v.y, v.z)
-}
-
 #[derive(Clone, Copy)]
-#[repr(align(16))]
 pub struct Triangle {
     pub v0: u32,
     pub v1: u32,
@@ -76,11 +71,11 @@ impl AABB {
     }
 
     pub fn transformed(&self, transform: &Mat4) -> Self {
-        let min = transform * Vec4::new(self.min.x, self.min.y, self.min.z, 1.0);
-        let max = transform * Vec4::new(self.max.x, self.max.y, self.max.z, 1.0);
+        let min = (transform * Vec4::new(self.min.x, self.min.y, self.min.z, 1.0)).truncate();
+        let max = (transform * Vec4::new(self.max.x, self.max.y, self.max.z, 1.0)).truncate();
         Self {
-            min: min.truncate(),
-            max: max.truncate(),
+            min: Vector3::new(min.x, min.y, min.z),
+            max: Vector3::new(max.x, max.y, max.z),
         }
     }
 }
@@ -94,9 +89,8 @@ impl Default for AABB {
     }
 }
 
-#[repr(C)]
 #[derive(Clone, Copy)]
-#[repr(align(16))]
+#[repr(C)]
 pub struct Ray {
     pub origin: Origin,
     pub direction: Direction,
@@ -123,9 +117,23 @@ impl Ray {
     }
 
     pub fn transformed(&self, transform: &Mat4) -> Self {
-        let o = transform * Vec4::new(self.origin.x, self.origin.y, self.origin.z, 1.0);
-        let d = transform * Vec4::new(self.direction.x, self.direction.y, self.direction.z, 0.0);
-        Self::new(o.truncate(), d.truncate().normalize())
+        let o =
+            (transform * Vec4::new(self.origin.x, self.origin.y, self.origin.z, 1.0)).truncate();
+        let d = (transform * Vec4::new(self.direction.x, self.direction.y, self.direction.z, 0.0))
+            .truncate()
+            .normalize();
+        Self::new(
+            Vector3 {
+                x: o.x,
+                y: o.y,
+                z: o.z,
+            },
+            Vector3 {
+                x: d.x,
+                y: d.y,
+                z: d.z,
+            },
+        )
     }
 }
 

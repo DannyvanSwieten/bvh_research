@@ -2,7 +2,7 @@ use cgmath::SquareMatrix;
 
 use crate::{
     intersect::{intersect_aabb, intersect_triangle},
-    types::{vec4_to_3, HitRecord, Mat4, Ray, Vec3, Vertex, AABB},
+    types::{HitRecord, Mat4, Ray, Vec3, Vertex, AABB},
 };
 #[repr(C)]
 pub struct Node {
@@ -99,13 +99,13 @@ impl Bvh {
             let v0 = vertex_indices[t] as usize;
             let v1 = vertex_indices[t + 1] as usize;
             let v2 = vertex_indices[t + 2] as usize;
-            node.aabb.min = crate::types::min(&node.aabb.min, &vec4_to_3(vertices[v0]));
-            node.aabb.min = crate::types::min(&node.aabb.min, &vec4_to_3(vertices[v1]));
-            node.aabb.min = crate::types::min(&node.aabb.min, &vec4_to_3(vertices[v2]));
+            node.aabb.min = crate::types::min(&node.aabb.min, &vertices[v0]);
+            node.aabb.min = crate::types::min(&node.aabb.min, &vertices[v1]);
+            node.aabb.min = crate::types::min(&node.aabb.min, &vertices[v2]);
 
-            node.aabb.max = crate::types::max(&node.aabb.max, &vec4_to_3(vertices[v0]));
-            node.aabb.max = crate::types::max(&node.aabb.max, &vec4_to_3(vertices[v1]));
-            node.aabb.max = crate::types::max(&node.aabb.max, &vec4_to_3(vertices[v2]));
+            node.aabb.max = crate::types::max(&node.aabb.max, &vertices[v0]);
+            node.aabb.max = crate::types::max(&node.aabb.max, &vertices[v1]);
+            node.aabb.max = crate::types::max(&node.aabb.max, &vertices[v2]);
         });
     }
 
@@ -261,14 +261,14 @@ impl Bvh {
 
             if centroid[axis] < position {
                 left_count += 1;
-                left_box.grow_with_position(&vec4_to_3(v0));
-                left_box.grow_with_position(&vec4_to_3(v1));
-                left_box.grow_with_position(&vec4_to_3(v2));
+                left_box.grow_with_position(&v0);
+                left_box.grow_with_position(&v1);
+                left_box.grow_with_position(&v2);
             } else {
                 right_count += 1;
-                right_box.grow_with_position(&vec4_to_3(v0));
-                right_box.grow_with_position(&vec4_to_3(v1));
-                right_box.grow_with_position(&vec4_to_3(v2));
+                right_box.grow_with_position(&v0);
+                right_box.grow_with_position(&v1);
+                right_box.grow_with_position(&v2);
             }
         });
 

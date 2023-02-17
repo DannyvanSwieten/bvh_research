@@ -1,28 +1,49 @@
 #version 460
 
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
+#extension GL_EXT_scalar_block_layout: require
+
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+#define FLOAT_MAX 10000
+
 struct Ray
 {
     vec3 origin;
     vec3 direction;
-    vec3 invDirection;
+    vec3 color;
 };
 
 struct Intersection{
     vec3 tuv;
-    uvec3 ip;
+    uvec2 ip;
 };
 
-layout(set = 0, binding = 0) buffer Rays {
+struct Instance{
+    uint64_t blas_address;
+    uint64_t instance_id;
+    mat4 transform;
+};
+
+layout(scalar, set = 0, binding = 0) buffer RayBuffer {
     Ray rays[];
 };
 
-layout(set = 0, binding = 1) buffer ShadowRays {
-    Ray shadow_rays[];
+layout(scalar, set = 0, binding = 1) readonly buffer IntersectionBuffer {
+    Intersection intersections[];
 };
 
-void shade(int ray_index, Intersection intersection);
+layout(scalar, set = 0, binding = 2) readonly buffer AccelerationStructure {
+    Instance instances[];
+};
+
+Ray shade(uint instance_id, uint primitive_id, float t, vec2 attributes, mat4 transform);
 
 void main()
 {
-
+    uint i = gl_GlobalInvocationID.y * 720 + gl_GlobalInvocationID.x;
+    Intersection intersection = intersections[i];
+    mat4 transform = instances[intersection.ip.x].transform;
+    rays[i] = shade(intersection.ip.x, intersection.ip.y, intersection.tuv.x, intersection.tuv.yz, transform);
 }
+
