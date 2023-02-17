@@ -19,7 +19,7 @@ pub struct GpuTlas {
 #[repr(C)]
 struct GpuInstance {
     blas: u64,
-    instance_id: u64,
+    instance_id: u32,
     transform: Mat4,
 }
 
@@ -36,7 +36,7 @@ impl GpuTlas {
             .iter()
             .map(|proxy| GpuInstance {
                 blas: proxy.blas().address(),
-                instance_id: proxy.id() as u64,
+                instance_id: proxy.id(),
                 transform: *proxy.transform(),
             })
             .collect();

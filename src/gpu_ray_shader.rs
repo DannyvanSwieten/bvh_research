@@ -86,4 +86,8 @@ impl GpuRayShader {
         command_buffer.dispatch_compute(width as u32 / 8, height as u32 / 8, 1);
         command_buffer.submit()
     }
+
+    pub fn set_buffer(&mut self, set: usize, binding: usize, buffer: &BufferResource) {
+        self.pipeline.set_storage_buffer(set, binding, buffer)
+    }
 }

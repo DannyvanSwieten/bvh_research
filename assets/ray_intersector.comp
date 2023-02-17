@@ -27,7 +27,7 @@ struct Node{
 
 struct Instance{
     uint64_t blas_address;
-    uint64_t instance_id;
+    uint32_t instance_id;
     mat4 transform;
 };
 
@@ -143,8 +143,8 @@ float intersect_triangle(Ray ray, vec3 v0, vec3 v1, vec3 v2, inout float u, inou
     return t;
 }
 
-float traverse_bttm_level(Ray ray, uint primitive_id, inout float u, inout float v);
-float traverse_top_level(Ray ray, inout float u, inout float v)
+float traverse_bttm_level(Ray ray, uint primitive_id, inout float u, inout float v, inout uint primitive_id);
+float traverse_top_level(Ray ray, inout float u, inout float v, inout uint instance_id, inout uint primitive_id)
 {
     uint node_idx = 0;
     uint stack_ptr = 0;
@@ -157,12 +157,15 @@ float traverse_top_level(Ray ray, inout float u, inout float v)
             uint last = first + tlas[node_idx].primitive_count;
             for (uint p = first; p < last; ++p) {
                 float lu, lv;
-                float dl = traverse_bttm_level(ray, p, lu, lv);
+                uint li = -1;
+                float dl = traverse_bttm_level(ray, p, lu, lv, li);
 
                 if (dl < d) {
                     d = dl;
                     u = lu;
                     v = lv;
+                    instance_id = p;
+                    primitive_id = li;
                 }
             }
             if (stack_ptr == 0) {
@@ -212,7 +215,7 @@ float traverse_top_level(Ray ray, inout float u, inout float v)
     return d;
 }
 
-float traverse_bttm_level(Ray ray, uint instance_id, inout float u, inout float v)
+float traverse_bttm_level(Ray ray, uint instance_id, inout float u, inout float v, inout uint primitive_id)
 {
     Instance instance = instances[instance_id];
     BlasRef blas_ref = BlasRef(instance.blas_address);
@@ -254,6 +257,7 @@ float traverse_bttm_level(Ray ray, uint instance_id, inout float u, inout float 
                     d = dl;
                     u = lu;
                     v = lv;
+                    primitive_id = i0;
                 }
             }
             if (stack_ptr == 0) {
@@ -299,7 +303,9 @@ void main(){
     uint i = gl_GlobalInvocationID.y * 720 + gl_GlobalInvocationID.x;
     Ray ray = rays[i];
     float u, v;
-    float d = traverse_top_level(ray, u, v);
+    uint instance_id = 0;
+    uint primitive_id = 0;
+    float d = traverse_top_level(ray, u, v, instance_id, primitive_id);
 
-    results[i] = Intersection(vec3(d, u, v), uvec2(0, 0));
+    results[i] = Intersection(vec3(d, u, v), uvec2(instance_id, primitive_id));
 }

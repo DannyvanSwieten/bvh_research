@@ -91,16 +91,18 @@ impl GpuRayGenerator {
         )
     }
 
-    pub fn generate_rays(
+    pub fn generate_rays<T: Copy>(
         &mut self,
         width: usize,
         height: usize,
         ray_buffer: &BufferResource,
+        constants: &T,
     ) -> WaitHandle {
         self.pipeline.set_storage_buffer(0, 0, ray_buffer);
         let mut command_buffer = CommandBuffer::new(self.queue.clone());
         command_buffer.begin();
         command_buffer.bind_compute_pipeline(&self.pipeline);
+        command_buffer.push_compute_constants(&self.pipeline, constants);
         command_buffer.dispatch_compute(width as u32 / 8, height as u32 / 8, 1);
         command_buffer.submit()
     }

@@ -8,9 +8,10 @@ use gpu_tracer::{
     gpu_ray_intersector::GpuIntersector,
     gpu_ray_shader::GpuRayShader,
     read_triangle_file,
-    types::{Mat4, Position, Ray, Vertex},
+    types::{Mat4, Vertex},
     write_intersection_buffer_to_file, write_ray_buffer_to_file,
 };
+use image::Frame;
 use vk_utils::{
     buffer_resource::BufferResource, queue::CommandQueue, vulkan::Vulkan, DebugUtils,
     PhysicalDeviceFeatures2KHR, PhysicalDeviceVulkan12Features, QueueFlags,
@@ -23,6 +24,11 @@ fn load_shader(name: &str) -> String {
         .join(name);
 
     std::fs::read_to_string(path).expect("Reading Shader File Failed")
+}
+#[derive(Clone, Copy)]
+struct FrameData {
+    pub frame: u32,
+    pub bounce: u32,
 }
 
 fn main() {
@@ -78,12 +84,12 @@ fn main() {
         &index_buffer,
     ));
     let gpu_instances = [
-        Instance::new(blas.clone(), 0),
-        Instance::new(blas, 1)
-            .with_transform(Mat4::from_translation(Vector3::<f32>::new(0.0, 1.0, 0.0))),
+        Instance::new(blas.clone(), 0).with_transform(Mat4::from_scale(0.25)),
+        // Instance::new(blas, 1)
+        //     .with_transform(Mat4::from_translation(Vector3::<f32>::new(0.0, 1.0, 0.0))),
     ];
 
-    let debug = true;
+    let debug = false;
 
     let acceleration_structure = GpuTlas::new(logical_device.clone(), &gpu_instances);
 
@@ -100,25 +106,33 @@ fn main() {
     let ray_shader = load_shader("ray_shader.glsl");
     let mut gpu_shader = GpuRayShader::new_from_string(queue, &ray_shader, 1, None);
 
+    let mut frame_data = FrameData {
+        frame: 0,
+        bounce: 0,
+    };
     let now = Instant::now();
-    gpu_ray_generator.generate_rays(width, height, &ray_buffer);
+    for sample in 0..16 {
+        gpu_ray_generator.generate_rays(width, height, &ray_buffer, &frame_data);
 
-    gpu_intersector.intersect(
-        width,
-        height,
-        &ray_buffer,
-        &intersection_buffer,
-        &acceleration_structure,
-    );
-    gpu_shader
-        .shade_rays(
+        gpu_intersector.intersect(
             width,
             height,
             &ray_buffer,
             &intersection_buffer,
             &acceleration_structure,
-        )
-        .wait();
+        );
+        gpu_shader.set_buffer(1, 0, &index_buffer);
+        gpu_shader.set_buffer(1, 1, &vertex_buffer);
+        gpu_shader.shade_rays(
+            width,
+            height,
+            &ray_buffer,
+            &intersection_buffer,
+            &acceleration_structure,
+        );
+
+        frame_data.frame += 1
+    }
     let elapsed_time = now.elapsed();
     println!("Tracing GPU took {} millis.", elapsed_time.as_millis());
     if debug {
