@@ -1,21 +1,21 @@
 use std::{collections::HashMap, path::Path, rc::Rc};
 
 use vk_utils::{
-    buffer_resource::BufferResource, command_buffer::CommandBuffer,
-    pipeline_descriptor::ComputePipeline, queue::CommandQueue, wait_handle::WaitHandle,
-    DescriptorSetLayoutBinding,
+    buffer_resource::BufferResource, command_buffer::CommandBuffer, device_context::DeviceContext,
+    pipeline_descriptor::ComputePipeline, queue::CommandQueue, AccessFlags,
+    DescriptorSetLayoutBinding, PipelineStageFlags,
 };
 
 use crate::gpu_acceleration_structure::GpuTlas;
 
 pub struct GpuRayShader {
-    queue: Rc<CommandQueue>,
+    device: Rc<DeviceContext>,
     pipeline: ComputePipeline,
 }
 
 impl GpuRayShader {
     pub fn new(
-        queue: Rc<CommandQueue>,
+        device: Rc<DeviceContext>,
         path: &Path,
         max_frames_in_flight: u32,
         descriptors: Option<HashMap<u32, Vec<DescriptorSetLayoutBinding>>>,
@@ -30,7 +30,7 @@ impl GpuRayShader {
         let src = template_src + &ray_gen_src;
 
         let pipeline = ComputePipeline::new_from_source_string(
-            queue.device(),
+            device.clone(),
             max_frames_in_flight,
             &src,
             "main",
@@ -38,11 +38,11 @@ impl GpuRayShader {
         )
         .unwrap();
 
-        Self { queue, pipeline }
+        Self { device, pipeline }
     }
 
     pub fn new_from_string(
-        queue: Rc<CommandQueue>,
+        device: Rc<DeviceContext>,
         src: &str,
         max_frames_in_flight: u32,
         descriptors: Option<HashMap<u32, Vec<DescriptorSetLayoutBinding>>>,
@@ -57,7 +57,7 @@ impl GpuRayShader {
         let src = template_src + src;
 
         let pipeline = ComputePipeline::new_from_source_string(
-            queue.device(),
+            device.clone(),
             max_frames_in_flight,
             &src,
             "main",
@@ -65,26 +65,38 @@ impl GpuRayShader {
         )
         .unwrap();
 
-        Self { queue, pipeline }
+        Self { device, pipeline }
     }
 
     pub fn shade_rays(
         &mut self,
+        command_buffer: &mut CommandBuffer,
         width: usize,
         height: usize,
         ray_buffer: &BufferResource,
         intersection_buffer: &BufferResource,
         acceleration_structure: &GpuTlas,
-    ) -> WaitHandle {
+    ) {
         self.pipeline.set_storage_buffer(0, 0, ray_buffer);
         self.pipeline.set_storage_buffer(0, 1, intersection_buffer);
         self.pipeline
             .set_storage_buffer(0, 2, &acceleration_structure.instance_buffer);
-        let mut command_buffer = CommandBuffer::new(self.queue.clone());
-        command_buffer.begin();
+        command_buffer.buffer_resource_barrier(
+            &ray_buffer,
+            PipelineStageFlags::COMPUTE_SHADER,
+            PipelineStageFlags::COMPUTE_SHADER,
+            AccessFlags::MEMORY_WRITE,
+            AccessFlags::MEMORY_READ,
+        );
+        command_buffer.buffer_resource_barrier(
+            &intersection_buffer,
+            PipelineStageFlags::COMPUTE_SHADER,
+            PipelineStageFlags::COMPUTE_SHADER,
+            AccessFlags::MEMORY_WRITE,
+            AccessFlags::MEMORY_READ,
+        );
         command_buffer.bind_compute_pipeline(&self.pipeline);
         command_buffer.dispatch_compute(width as u32 / 8, height as u32 / 8, 1);
-        command_buffer.submit()
     }
 
     pub fn set_buffer(&mut self, set: usize, binding: usize, buffer: &BufferResource) {

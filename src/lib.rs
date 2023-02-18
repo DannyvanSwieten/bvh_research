@@ -138,3 +138,26 @@ pub fn write_ray_buffer_to_file(name: &str, buffer: &[Ray], width: usize, height
     image::save_buffer(name, &pixels, width as _, height as _, ColorType::Rgba8)
         .expect("Image write failed");
 }
+
+pub fn write_hdr_buffer_to_file(
+    name: &str,
+    sample_count: usize,
+    buffer: &[HdrColor],
+    width: usize,
+    height: usize,
+) {
+    let f = 1.0 / sample_count as f32;
+    let pixels: Vec<u8> = buffer
+        .iter()
+        .flat_map(|result| {
+            let pixel = result * f;
+            let r = (pixel.x.sqrt() * 255.0) as u8;
+            let g = (pixel.y.sqrt() * 255.0) as u8;
+            let b = (pixel.z.sqrt() * 255.0) as u8;
+            let a = 255_u8;
+            vec![r, g, b, a].into_iter()
+        })
+        .collect();
+    image::save_buffer(name, &pixels, width as _, height as _, ColorType::Rgba8)
+        .expect("Image write failed");
+}

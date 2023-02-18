@@ -1,21 +1,21 @@
 use std::{collections::HashMap, mem::size_of, path::Path, rc::Rc};
 
 use vk_utils::{
-    buffer_resource::BufferResource, command_buffer::CommandBuffer,
-    pipeline_descriptor::ComputePipeline, queue::CommandQueue, wait_handle::WaitHandle,
-    BufferUsageFlags, DescriptorSetLayoutBinding, MemoryPropertyFlags,
+    buffer_resource::BufferResource, command_buffer::CommandBuffer, device_context::DeviceContext,
+    pipeline_descriptor::ComputePipeline, queue::CommandQueue, BufferUsageFlags,
+    DescriptorSetLayoutBinding, MemoryPropertyFlags,
 };
 
 use crate::types::Ray;
 
 pub struct GpuRayGenerator {
-    queue: Rc<CommandQueue>,
+    device: Rc<DeviceContext>,
     pipeline: ComputePipeline,
 }
 
 impl GpuRayGenerator {
     pub fn new(
-        queue: Rc<CommandQueue>,
+        device: Rc<DeviceContext>,
         path: &Path,
         max_frames_in_flight: u32,
         descriptors: Option<HashMap<u32, Vec<DescriptorSetLayoutBinding>>>,
@@ -30,7 +30,7 @@ impl GpuRayGenerator {
         let src = template_src + &ray_gen_src;
 
         let pipeline = ComputePipeline::new_from_source_string(
-            queue.device(),
+            device.clone(),
             max_frames_in_flight,
             &src,
             "main",
@@ -38,11 +38,11 @@ impl GpuRayGenerator {
         )
         .unwrap();
 
-        Self { queue, pipeline }
+        Self { device, pipeline }
     }
 
     pub fn new_from_string(
-        queue: Rc<CommandQueue>,
+        device: Rc<DeviceContext>,
         src: &str,
         max_frames_in_flight: u32,
         descriptors: Option<HashMap<u32, Vec<DescriptorSetLayoutBinding>>>,
@@ -57,7 +57,7 @@ impl GpuRayGenerator {
         let src = template_src + src;
 
         let pipeline = ComputePipeline::new_from_source_string(
-            queue.device(),
+            device.clone(),
             max_frames_in_flight,
             &src,
             "main",
@@ -65,7 +65,7 @@ impl GpuRayGenerator {
         )
         .unwrap();
 
-        Self { queue, pipeline }
+        Self { device, pipeline }
     }
 
     pub fn ray_buffer_size(&self, width: usize, height: usize) -> usize {
@@ -84,7 +84,7 @@ impl GpuRayGenerator {
             MemoryPropertyFlags::DEVICE_LOCAL
         };
         BufferResource::new(
-            self.queue.device(),
+            self.device.clone(),
             self.ray_buffer_size(width, height),
             memory_flags,
             BufferUsageFlags::STORAGE_BUFFER,
@@ -93,17 +93,15 @@ impl GpuRayGenerator {
 
     pub fn generate_rays<T: Copy>(
         &mut self,
+        command_buffer: &mut CommandBuffer,
         width: usize,
         height: usize,
         ray_buffer: &BufferResource,
         constants: &T,
-    ) -> WaitHandle {
+    ) {
         self.pipeline.set_storage_buffer(0, 0, ray_buffer);
-        let mut command_buffer = CommandBuffer::new(self.queue.clone());
-        command_buffer.begin();
         command_buffer.bind_compute_pipeline(&self.pipeline);
         command_buffer.push_compute_constants(&self.pipeline, constants);
         command_buffer.dispatch_compute(width as u32 / 8, height as u32 / 8, 1);
-        command_buffer.submit()
     }
 }

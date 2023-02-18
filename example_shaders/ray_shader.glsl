@@ -101,7 +101,7 @@ Ray shade(Ray ray, uint instance_id, uint primitive_id, float t, vec2 attributes
         vec3 L = vec3(1, 1, -1);
         L = normalize(L);
         float I = max(0, dot(N, L));
-        return Ray(vec3(0.1, .2, .5), vec3(0.6, .7, 8), vec3(1) * ray.color + vec3(1) * vec3(I));
+        return Ray(vec3(0.1, .2, .5), vec3(0.6, .7, 8), vec3(1) * ray.color + vec3(1) * I);
     } 
     else 
     {

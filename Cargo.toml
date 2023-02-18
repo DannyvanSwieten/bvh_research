@@ -15,3 +15,4 @@ image="*"
 rayon="*"
 crossbeam="*"
 vk_utils={git = "https://github.com/DannyvanSwieten/vk_utils.git"}
+tobj = "*"

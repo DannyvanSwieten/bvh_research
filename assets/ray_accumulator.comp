@@ -13,7 +13,7 @@ layout(scalar, set = 0, binding = 0) readonly buffer Rays {
     Ray rays[];
 };
 
-layout(set = 0, binding = 0, rgba32f) uniform image2D output_buffer;
+layout(set = 0, binding = 1, rgba32f) uniform image2D output_buffer;
 
 
 void main()
