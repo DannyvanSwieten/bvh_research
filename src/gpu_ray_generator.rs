@@ -2,8 +2,8 @@ use std::{collections::HashMap, mem::size_of, path::Path, rc::Rc};
 
 use vk_utils::{
     buffer_resource::BufferResource, command_buffer::CommandBuffer, device_context::DeviceContext,
-    pipeline_descriptor::ComputePipeline, queue::CommandQueue, BufferUsageFlags,
-    DescriptorSetLayoutBinding, MemoryPropertyFlags,
+    pipeline_descriptor::ComputePipeline, BufferUsageFlags, DescriptorSetLayoutBinding,
+    MemoryPropertyFlags,
 };
 
 use crate::types::Ray;
@@ -96,12 +96,14 @@ impl GpuRayGenerator {
         command_buffer: &mut CommandBuffer,
         width: usize,
         height: usize,
-        ray_buffer: &BufferResource,
         constants: &T,
     ) {
-        self.pipeline.set_storage_buffer(0, 0, ray_buffer);
         command_buffer.bind_compute_pipeline(&self.pipeline);
         command_buffer.push_compute_constants(&self.pipeline, constants);
         command_buffer.dispatch_compute(width as u32 / 8, height as u32 / 8, 1);
+    }
+
+    pub fn set(&mut self, buffer: &BufferResource) {
+        self.pipeline.set_storage_buffer(0, 0, buffer);
     }
 }

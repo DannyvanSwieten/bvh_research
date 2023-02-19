@@ -2,8 +2,7 @@ use std::{collections::HashMap, path::Path, rc::Rc};
 
 use vk_utils::{
     buffer_resource::BufferResource, command_buffer::CommandBuffer, device_context::DeviceContext,
-    pipeline_descriptor::ComputePipeline, queue::CommandQueue, AccessFlags,
-    DescriptorSetLayoutBinding, PipelineStageFlags,
+    pipeline_descriptor::ComputePipeline, DescriptorSetLayoutBinding,
 };
 
 use crate::gpu_acceleration_structure::GpuTlas;
@@ -68,11 +67,13 @@ impl GpuRayShader {
         Self { device, pipeline }
     }
 
-    pub fn shade_rays(
+    pub fn shade_rays(&mut self, command_buffer: &mut CommandBuffer, width: usize, height: usize) {
+        command_buffer.bind_compute_pipeline(&self.pipeline);
+        command_buffer.dispatch_compute(width as u32 / 8, height as u32 / 8, 1);
+    }
+
+    pub fn set(
         &mut self,
-        command_buffer: &mut CommandBuffer,
-        width: usize,
-        height: usize,
         ray_buffer: &BufferResource,
         intersection_buffer: &BufferResource,
         acceleration_structure: &GpuTlas,
@@ -81,25 +82,11 @@ impl GpuRayShader {
         self.pipeline.set_storage_buffer(0, 1, intersection_buffer);
         self.pipeline
             .set_storage_buffer(0, 2, &acceleration_structure.instance_buffer);
-        command_buffer.buffer_resource_barrier(
-            &ray_buffer,
-            PipelineStageFlags::COMPUTE_SHADER,
-            PipelineStageFlags::COMPUTE_SHADER,
-            AccessFlags::MEMORY_WRITE,
-            AccessFlags::MEMORY_READ,
-        );
-        command_buffer.buffer_resource_barrier(
-            &intersection_buffer,
-            PipelineStageFlags::COMPUTE_SHADER,
-            PipelineStageFlags::COMPUTE_SHADER,
-            AccessFlags::MEMORY_WRITE,
-            AccessFlags::MEMORY_READ,
-        );
-        command_buffer.bind_compute_pipeline(&self.pipeline);
-        command_buffer.dispatch_compute(width as u32 / 8, height as u32 / 8, 1);
     }
 
-    pub fn set_buffer(&mut self, set: usize, binding: usize, buffer: &BufferResource) {
+    pub fn set_user_buffer(&mut self, set: usize, binding: usize, buffer: &BufferResource) {
+        // set 0 is not for the user
+        assert_ne!(set, 0);
         self.pipeline.set_storage_buffer(set, binding, buffer)
     }
 }

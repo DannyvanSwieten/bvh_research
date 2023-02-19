@@ -1,9 +1,8 @@
 use std::{collections::HashMap, mem::size_of, rc::Rc};
 use vk_utils::{
     buffer_resource::BufferResource, command_buffer::CommandBuffer, device_context::DeviceContext,
-    pipeline_descriptor::ComputePipeline, queue::CommandQueue, AccessFlags, BufferUsageFlags,
-    DescriptorSetLayoutBinding, DescriptorType, MemoryPropertyFlags, PipelineStageFlags,
-    ShaderStageFlags,
+    pipeline_descriptor::ComputePipeline, BufferUsageFlags, DescriptorSetLayoutBinding,
+    DescriptorType, MemoryPropertyFlags, ShaderStageFlags,
 };
 
 use crate::gpu_acceleration_structure::GpuTlas;
@@ -64,11 +63,13 @@ impl GpuIntersector {
         Self { pipeline, device }
     }
 
-    pub fn intersect(
+    pub fn intersect(&mut self, command_buffer: &mut CommandBuffer, width: usize, height: usize) {
+        command_buffer.bind_compute_pipeline(&self.pipeline);
+        command_buffer.dispatch_compute(width as u32 / 8, height as u32 / 8, 1);
+    }
+
+    pub fn set(
         &mut self,
-        command_buffer: &mut CommandBuffer,
-        width: usize,
-        height: usize,
         ray_buffer: &BufferResource,
         intersection_result_buffer: &BufferResource,
         acceleration_structure: &GpuTlas,
@@ -80,16 +81,6 @@ impl GpuIntersector {
         self.pipeline.set_storage_buffer(0, 2, ray_buffer);
         self.pipeline
             .set_storage_buffer(0, 3, intersection_result_buffer);
-
-        command_buffer.buffer_resource_barrier(
-            &ray_buffer,
-            PipelineStageFlags::COMPUTE_SHADER,
-            PipelineStageFlags::COMPUTE_SHADER,
-            AccessFlags::MEMORY_WRITE,
-            AccessFlags::MEMORY_READ,
-        );
-        command_buffer.bind_compute_pipeline(&self.pipeline);
-        command_buffer.dispatch_compute(width as u32 / 8, height as u32 / 8, 1);
     }
 
     pub fn allocate_intersection_buffer(

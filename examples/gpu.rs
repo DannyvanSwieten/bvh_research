@@ -15,9 +15,9 @@ use gpu_tracer::{
 use image::Frame;
 use vk_utils::{
     buffer_resource::BufferResource, command_buffer::CommandBuffer,
-    image2d_resource::Image2DResource, queue::CommandQueue, vulkan::Vulkan, BufferUsageFlags,
-    DebugUtils, Format, ImageUsageFlags, MemoryPropertyFlags, PhysicalDeviceFeatures2KHR,
-    PhysicalDeviceVulkan12Features, QueueFlags,
+    image2d_resource::Image2DResource, queue::CommandQueue, vulkan::Vulkan, AccessFlags,
+    BufferUsageFlags, DebugUtils, Format, ImageLayout, ImageUsageFlags, MemoryPropertyFlags,
+    PhysicalDeviceFeatures2KHR, PhysicalDeviceVulkan12Features, PipelineStageFlags, QueueFlags,
 };
 
 fn load_shader(name: &str) -> String {
@@ -37,7 +37,7 @@ struct FrameData {
 fn main() {
     let vulkan = Vulkan::new(
         "My Application",
-        &["VK_LAYER_KHRONOS_validation"],
+        &[],
         &[DebugUtils::name().to_str().unwrap()],
     );
 
@@ -122,45 +122,64 @@ fn main() {
         MemoryPropertyFlags::DEVICE_LOCAL,
     );
 
+    let mut transition_buffer = CommandBuffer::new(queue.clone());
+    transition_buffer.begin();
+    transition_buffer.image_resource_transition(&mut image, ImageLayout::GENERAL);
+    transition_buffer.submit();
+
     let mut frame_data = FrameData {
         frame: 0,
         bounce: 0,
     };
+    gpu_ray_generator.set(&ray_buffer);
+    gpu_intersector.set(&ray_buffer, &intersection_buffer, &acceleration_structure);
+    gpu_shader.set_user_buffer(1, 0, &index_buffer);
+    gpu_shader.set_user_buffer(1, 1, &vertex_buffer);
+    gpu_shader.set(&ray_buffer, &intersection_buffer, &acceleration_structure);
+    ray_accumulator.set(&ray_buffer, &image);
     let now = Instant::now();
-    for sample in 0..16 {
-        let mut command_buffer = CommandBuffer::new(queue.clone());
-        command_buffer.begin();
-        gpu_ray_generator.generate_rays(
-            &mut command_buffer,
-            width,
-            height,
+    let mut command_buffer = CommandBuffer::new(queue.clone());
+    command_buffer.begin();
+    for sample in 0..4 {
+        gpu_ray_generator.generate_rays(&mut command_buffer, width, height, &frame_data);
+
+        command_buffer.buffer_resource_barrier(
             &ray_buffer,
-            &frame_data,
+            PipelineStageFlags::COMPUTE_SHADER,
+            PipelineStageFlags::COMPUTE_SHADER,
+            AccessFlags::MEMORY_WRITE,
+            AccessFlags::MEMORY_READ,
         );
 
-        gpu_intersector.intersect(
-            &mut command_buffer,
-            width,
-            height,
+        gpu_intersector.intersect(&mut command_buffer, width, height);
+        command_buffer.buffer_resource_barrier(
             &ray_buffer,
-            &intersection_buffer,
-            &acceleration_structure,
+            PipelineStageFlags::COMPUTE_SHADER,
+            PipelineStageFlags::COMPUTE_SHADER,
+            AccessFlags::MEMORY_WRITE,
+            AccessFlags::MEMORY_READ,
         );
-        gpu_shader.set_buffer(1, 0, &index_buffer);
-        gpu_shader.set_buffer(1, 1, &vertex_buffer);
-        gpu_shader.shade_rays(
-            &mut command_buffer,
-            width,
-            height,
-            &ray_buffer,
+        command_buffer.buffer_resource_barrier(
             &intersection_buffer,
-            &acceleration_structure,
+            PipelineStageFlags::COMPUTE_SHADER,
+            PipelineStageFlags::COMPUTE_SHADER,
+            AccessFlags::MEMORY_WRITE,
+            AccessFlags::MEMORY_READ,
         );
 
-        ray_accumulator.accumulate(&mut command_buffer, &ray_buffer, &mut image);
-        command_buffer.submit();
+        gpu_shader.shade_rays(&mut command_buffer, width, height);
+        command_buffer.buffer_resource_barrier(
+            &ray_buffer,
+            PipelineStageFlags::COMPUTE_SHADER,
+            PipelineStageFlags::COMPUTE_SHADER,
+            AccessFlags::MEMORY_WRITE,
+            AccessFlags::MEMORY_READ,
+        );
+
+        ray_accumulator.accumulate(width, height, &mut command_buffer);
         frame_data.frame += 1
     }
+    command_buffer.submit();
     let elapsed_time = now.elapsed();
     println!("Tracing GPU took {} millis.", elapsed_time.as_millis());
     if debug {
