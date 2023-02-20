@@ -3,7 +3,7 @@
 #extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
 #extension GL_EXT_scalar_block_layout: require
 
-layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
 #define FLOAT_MAX 10000
 
@@ -41,9 +41,12 @@ Ray shade(Ray ray, uint instance_id, uint primitive_id, float t, vec2 attributes
 
 void main()
 {
-    uint i = gl_GlobalInvocationID.y * 720 + gl_GlobalInvocationID.x;
-    Intersection intersection = intersections[i];
-    mat4 transform = instances[intersection.ip.x].transform;
-    rays[i] = shade(rays[i], intersection.ip.x, intersection.ip.y, intersection.tuv.x, intersection.tuv.yz, transform);
+    if(gl_GlobalInvocationID.x < 720 && gl_GlobalInvocationID.y < 640)
+    {
+        uint i = gl_GlobalInvocationID.y * 720 + gl_GlobalInvocationID.x;
+        Intersection intersection = intersections[i];
+        mat4 transform = instances[intersection.ip.x].transform;
+        rays[i] = shade(rays[i], intersection.ip.x, intersection.ip.y, intersection.tuv.x, intersection.tuv.yz, transform);
+    }
 }
 

@@ -1,12 +1,18 @@
-use cgmath::{InnerSpace, Matrix4, SquareMatrix, Vector3, Vector4};
+use cgmath::{InnerSpace, Matrix4, SquareMatrix, Vector2, Vector3, Vector4};
 
+pub type Vec2 = Vector2<f32>;
 pub type Vec3 = Vector3<f32>;
 pub type Vec4 = Vector4<f32>;
+
+pub type TexCoord = Vec2;
+
 pub type Vertex = Vec3;
 pub type Position = Vec3;
 pub type Direction = Vec3;
 pub type Origin = Vec3;
+
 pub type HdrColor = Vec4;
+
 pub type Mat4 = Matrix4<f32>;
 
 #[derive(Clone, Copy)]

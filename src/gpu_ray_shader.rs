@@ -69,7 +69,7 @@ impl GpuRayShader {
 
     pub fn shade_rays(&mut self, command_buffer: &mut CommandBuffer, width: usize, height: usize) {
         command_buffer.bind_compute_pipeline(&self.pipeline);
-        command_buffer.dispatch_compute(width as u32 / 8, height as u32 / 8, 1);
+        command_buffer.dispatch_compute(width as u32 / 16, height as u32 / 16, 1);
     }
 
     pub fn set(

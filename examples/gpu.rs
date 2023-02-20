@@ -1,6 +1,5 @@
 use std::{mem::size_of, rc::Rc, time::Instant};
 
-use cgmath::Vector3;
 use gpu_tracer::{
     blas::{Blas, Instance},
     gpu_acceleration_structure::GpuTlas,
@@ -12,7 +11,7 @@ use gpu_tracer::{
     types::{HdrColor, Mat4, Vertex},
     write_hdr_buffer_to_file, write_intersection_buffer_to_file, write_ray_buffer_to_file,
 };
-use image::Frame;
+
 use vk_utils::{
     buffer_resource::BufferResource, command_buffer::CommandBuffer,
     image2d_resource::Image2DResource, queue::CommandQueue, vulkan::Vulkan, AccessFlags,
@@ -86,11 +85,7 @@ fn main() {
         &vertex_buffer,
         &index_buffer,
     ));
-    let gpu_instances = [
-        Instance::new(blas.clone(), 0).with_transform(Mat4::from_scale(0.25)),
-        // Instance::new(blas, 1)
-        //     .with_transform(Mat4::from_translation(Vector3::<f32>::new(0.0, 1.0, 0.0))),
-    ];
+    let gpu_instances = [Instance::new(blas.clone(), 0).with_transform(Mat4::from_scale(0.25))];
 
     let debug = true;
 
@@ -140,8 +135,8 @@ fn main() {
     let now = Instant::now();
     let mut command_buffer = CommandBuffer::new(queue.clone());
     command_buffer.begin();
-    for sample in 0..4 {
-        gpu_ray_generator.generate_rays(&mut command_buffer, width, height, &frame_data);
+    for _ in 0..4 {
+        gpu_ray_generator.generate_rays(&mut command_buffer, width, height, Some(&frame_data));
 
         command_buffer.buffer_resource_barrier(
             &ray_buffer,
@@ -177,6 +172,7 @@ fn main() {
         );
 
         ray_accumulator.accumulate(width, height, &mut command_buffer);
+        command_buffer.image_resource_transition(&mut image, ImageLayout::GENERAL);
         frame_data.frame += 1
     }
     command_buffer.submit();

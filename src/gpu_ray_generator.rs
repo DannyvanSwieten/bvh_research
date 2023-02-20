@@ -96,11 +96,13 @@ impl GpuRayGenerator {
         command_buffer: &mut CommandBuffer,
         width: usize,
         height: usize,
-        constants: &T,
+        constants: Option<&T>,
     ) {
         command_buffer.bind_compute_pipeline(&self.pipeline);
-        command_buffer.push_compute_constants(&self.pipeline, constants);
-        command_buffer.dispatch_compute(width as u32 / 8, height as u32 / 8, 1);
+        if let Some(constants) = constants {
+            command_buffer.push_compute_constants(&self.pipeline, constants);
+        }
+        command_buffer.dispatch_compute(width as u32 / 16, height as u32 / 16, 1);
     }
 
     pub fn set(&mut self, buffer: &BufferResource) {
