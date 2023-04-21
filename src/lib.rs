@@ -1,21 +1,19 @@
-pub mod blas;
 pub mod bvh;
 pub mod camera;
+pub mod cpu;
 pub mod cube;
 pub mod frame_buffer;
-pub mod gpu_acceleration_structure;
-pub mod gpu_ray_accumulator;
-pub mod gpu_ray_generator;
-pub mod gpu_ray_intersector;
-pub mod gpu_ray_shader;
+pub mod gpu;
 pub mod intersect;
+pub mod material;
+pub mod scene;
 pub mod top_level_acceleration_structure;
 pub mod trace;
 pub mod types;
 
 use std::io::BufRead;
 
-use gpu_ray_intersector::IntersectionResult;
+use gpu::gpu_ray_intersector::IntersectionResult;
 use image::ColorType;
 use types::{Ray, Vertex};
 
@@ -128,9 +126,9 @@ pub fn write_ray_buffer_to_file(name: &str, buffer: &[Ray], width: usize, height
     let pixels: Vec<u8> = buffer
         .iter()
         .flat_map(|result| {
-            let r = (result.inv_direcion.x.sqrt() * 255.0) as u8;
-            let g = (result.inv_direcion.y.sqrt() * 255.0) as u8;
-            let b = (result.inv_direcion.z.sqrt() * 255.0) as u8;
+            let r = (result.color.x.sqrt() * 255.0) as u8;
+            let g = (result.color.y.sqrt() * 255.0) as u8;
+            let b = (result.color.z.sqrt() * 255.0) as u8;
             let a = 255_u8;
             vec![r, g, b, a].into_iter()
         })

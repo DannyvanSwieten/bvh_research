@@ -5,8 +5,9 @@ use vk_utils::{
     image2d_resource::Image2DResource, pipeline_descriptor::ComputePipeline,
 };
 
+use super::frame_data::FrameData;
+
 pub struct GpuRayAccumulator {
-    device: Rc<DeviceContext>,
     pipeline: ComputePipeline,
 }
 
@@ -25,12 +26,12 @@ impl GpuRayAccumulator {
         )
         .unwrap();
 
-        Self { device, pipeline }
+        Self { pipeline }
     }
 
-    pub fn accumulate(&mut self, width: usize, height: usize, command_buffer: &mut CommandBuffer) {
+    pub fn accumulate(&mut self, frame_data: &FrameData, command_buffer: &mut CommandBuffer) {
         command_buffer.bind_compute_pipeline(&self.pipeline);
-        command_buffer.dispatch_compute(width as u32, height as u32, 1);
+        command_buffer.dispatch_compute(frame_data.width as u32, frame_data.height as u32, 1);
     }
 
     pub fn set(&mut self, ray_buffer: &BufferResource, image: &Image2DResource) {

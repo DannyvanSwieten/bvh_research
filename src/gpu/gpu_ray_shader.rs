@@ -1,19 +1,17 @@
-use std::{collections::HashMap, mem::size_of, path::Path, rc::Rc};
+use std::{collections::HashMap, path::Path, rc::Rc};
 
 use vk_utils::{
     buffer_resource::BufferResource, command_buffer::CommandBuffer, device_context::DeviceContext,
-    pipeline_descriptor::ComputePipeline, BufferUsageFlags, DescriptorSetLayoutBinding,
-    MemoryPropertyFlags,
+    pipeline_descriptor::ComputePipeline, DescriptorSetLayoutBinding,
 };
 
-use crate::types::Ray;
+use super::{frame_data::FrameData, gpu_acceleration_structure::GpuTlas};
 
-pub struct GpuRayGenerator {
-    device: Rc<DeviceContext>,
+pub struct GpuRayShader {
     pipeline: ComputePipeline,
 }
 
-impl GpuRayGenerator {
+impl GpuRayShader {
     pub fn new(
         device: Rc<DeviceContext>,
         path: &Path,
@@ -22,7 +20,7 @@ impl GpuRayGenerator {
     ) -> Self {
         let template_path = std::env::current_dir()
             .unwrap()
-            .join("./assets/ray_gen.comp");
+            .join("./assets/ray_shader.comp");
 
         let ray_gen_src = std::fs::read_to_string(path).expect("Couldn't load Ray generator file");
         let template_src = std::fs::read_to_string(template_path)
@@ -38,7 +36,7 @@ impl GpuRayGenerator {
         )
         .unwrap();
 
-        Self { device, pipeline }
+        Self { pipeline }
     }
 
     pub fn new_from_string(
@@ -49,7 +47,7 @@ impl GpuRayGenerator {
     ) -> Self {
         let template_path = std::env::current_dir()
             .unwrap()
-            .join("./assets/ray_gen.comp");
+            .join("./assets/ray_shader.comp");
 
         let template_src = std::fs::read_to_string(template_path)
             .expect("Couldn't load Ray generator template file");
@@ -65,47 +63,35 @@ impl GpuRayGenerator {
         )
         .unwrap();
 
-        Self { device, pipeline }
+        Self { pipeline }
     }
 
-    pub fn ray_buffer_size(&self, width: usize, height: usize) -> usize {
-        width * height * size_of::<Ray>()
-    }
-
-    pub fn allocate_ray_buffer(
-        &self,
-        width: usize,
-        height: usize,
-        host_visible: bool,
-    ) -> BufferResource {
-        let memory_flags = if host_visible {
-            MemoryPropertyFlags::HOST_VISIBLE
-        } else {
-            MemoryPropertyFlags::DEVICE_LOCAL
-        };
-        BufferResource::new(
-            self.device.clone(),
-            self.ray_buffer_size(width, height),
-            memory_flags,
-            BufferUsageFlags::STORAGE_BUFFER,
-        )
-    }
-
-    pub fn generate_rays<T: Copy>(
-        &mut self,
-        command_buffer: &mut CommandBuffer,
-        width: usize,
-        height: usize,
-        constants: Option<&T>,
-    ) {
+    pub fn shade_rays(&mut self, command_buffer: &mut CommandBuffer, frame_data: &FrameData) {
+        self.pipeline
+            .set_uniform_buffer(0, 3, &frame_data.uniform_buffer);
         command_buffer.bind_compute_pipeline(&self.pipeline);
-        if let Some(constants) = constants {
-            command_buffer.push_compute_constants(&self.pipeline, constants);
-        }
-        command_buffer.dispatch_compute(width as u32 / 16, height as u32 / 16, 1);
+        command_buffer.dispatch_compute(
+            frame_data.width as u32 / 16,
+            frame_data.height as u32 / 16,
+            1,
+        );
     }
 
-    pub fn set(&mut self, buffer: &BufferResource) {
-        self.pipeline.set_storage_buffer(0, 0, buffer);
+    pub fn set(
+        &mut self,
+        ray_buffer: &BufferResource,
+        intersection_buffer: &BufferResource,
+        acceleration_structure: &GpuTlas,
+    ) {
+        self.pipeline.set_storage_buffer(0, 0, ray_buffer);
+        self.pipeline.set_storage_buffer(0, 1, intersection_buffer);
+        self.pipeline
+            .set_storage_buffer(0, 2, &acceleration_structure.instance_buffer);
+    }
+
+    pub fn set_user_buffer(&mut self, set: usize, binding: usize, buffer: &BufferResource) {
+        // set 0 is not for the user
+        assert_ne!(set, 0);
+        self.pipeline.set_storage_buffer(set, binding, buffer)
     }
 }

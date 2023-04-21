@@ -1,18 +1,21 @@
-use std::{collections::HashMap, path::Path, rc::Rc};
+use std::{collections::HashMap, mem::size_of, path::Path, rc::Rc};
 
 use vk_utils::{
     buffer_resource::BufferResource, command_buffer::CommandBuffer, device_context::DeviceContext,
-    pipeline_descriptor::ComputePipeline, DescriptorSetLayoutBinding,
+    pipeline_descriptor::ComputePipeline, BufferUsageFlags, DescriptorSetLayoutBinding,
+    MemoryPropertyFlags,
 };
 
-use crate::gpu_acceleration_structure::GpuTlas;
+use crate::types::Ray;
 
-pub struct GpuRayShader {
+use super::frame_data::FrameData;
+
+pub struct GpuRayGenerator {
     device: Rc<DeviceContext>,
     pipeline: ComputePipeline,
 }
 
-impl GpuRayShader {
+impl GpuRayGenerator {
     pub fn new(
         device: Rc<DeviceContext>,
         path: &Path,
@@ -21,7 +24,7 @@ impl GpuRayShader {
     ) -> Self {
         let template_path = std::env::current_dir()
             .unwrap()
-            .join("./assets/ray_shader.comp");
+            .join("./assets/ray_gen.comp");
 
         let ray_gen_src = std::fs::read_to_string(path).expect("Couldn't load Ray generator file");
         let template_src = std::fs::read_to_string(template_path)
@@ -48,7 +51,7 @@ impl GpuRayShader {
     ) -> Self {
         let template_path = std::env::current_dir()
             .unwrap()
-            .join("./assets/ray_shader.comp");
+            .join("./assets/ray_gen.comp");
 
         let template_src = std::fs::read_to_string(template_path)
             .expect("Couldn't load Ray generator template file");
@@ -67,26 +70,49 @@ impl GpuRayShader {
         Self { device, pipeline }
     }
 
-    pub fn shade_rays(&mut self, command_buffer: &mut CommandBuffer, width: usize, height: usize) {
-        command_buffer.bind_compute_pipeline(&self.pipeline);
-        command_buffer.dispatch_compute(width as u32 / 16, height as u32 / 16, 1);
+    pub fn ray_buffer_size(&self, frame_data: &FrameData) -> usize {
+        frame_data.width * frame_data.height * size_of::<Ray>()
     }
 
-    pub fn set(
+    pub fn allocate_ray_buffer(
+        &self,
+        frame_data: &FrameData,
+        host_visible: bool,
+    ) -> BufferResource {
+        let memory_flags = if host_visible {
+            MemoryPropertyFlags::HOST_VISIBLE
+        } else {
+            MemoryPropertyFlags::DEVICE_LOCAL
+        };
+        BufferResource::new(
+            self.device.clone(),
+            self.ray_buffer_size(frame_data),
+            memory_flags,
+            BufferUsageFlags::STORAGE_BUFFER,
+        )
+    }
+
+    pub fn generate_rays<T: Copy>(
         &mut self,
-        ray_buffer: &BufferResource,
-        intersection_buffer: &BufferResource,
-        acceleration_structure: &GpuTlas,
+        command_buffer: &mut CommandBuffer,
+        frame_data: &FrameData,
+        constants: Option<&T>,
     ) {
-        self.pipeline.set_storage_buffer(0, 0, ray_buffer);
-        self.pipeline.set_storage_buffer(0, 1, intersection_buffer);
         self.pipeline
-            .set_storage_buffer(0, 2, &acceleration_structure.instance_buffer);
+            .set_uniform_buffer(0, 1, &frame_data.uniform_buffer);
+        command_buffer.bind_compute_pipeline(&self.pipeline);
+
+        if let Some(constants) = constants {
+            command_buffer.push_compute_constants(&self.pipeline, 0, constants);
+        }
+        command_buffer.dispatch_compute(
+            frame_data.width as u32 / 16,
+            frame_data.height as u32 / 16,
+            1,
+        );
     }
 
-    pub fn set_user_buffer(&mut self, set: usize, binding: usize, buffer: &BufferResource) {
-        // set 0 is not for the user
-        assert_ne!(set, 0);
-        self.pipeline.set_storage_buffer(set, binding, buffer)
+    pub fn set_ray_buffer(&mut self, ray_buffer: &BufferResource) {
+        self.pipeline.set_storage_buffer(0, 0, ray_buffer);
     }
 }

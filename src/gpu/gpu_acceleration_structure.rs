@@ -6,10 +6,11 @@ use vk_utils::{
 };
 
 use crate::{
-    blas::Instance,
     bvh::Node,
     types::{Mat4, AABB},
 };
+
+use super::blas::Instance;
 
 pub struct GpuTlas {
     pub tlas_buffer: BufferResource,

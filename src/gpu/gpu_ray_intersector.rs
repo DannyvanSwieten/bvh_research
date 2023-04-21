@@ -5,7 +5,7 @@ use vk_utils::{
     DescriptorType, MemoryPropertyFlags, ShaderStageFlags,
 };
 
-use crate::gpu_acceleration_structure::GpuTlas;
+use super::{frame_data::FrameData, gpu_acceleration_structure::GpuTlas};
 
 pub struct GpuIntersector {
     device: Rc<DeviceContext>,
@@ -63,9 +63,15 @@ impl GpuIntersector {
         Self { pipeline, device }
     }
 
-    pub fn intersect(&mut self, command_buffer: &mut CommandBuffer, width: usize, height: usize) {
+    pub fn intersect(&mut self, command_buffer: &mut CommandBuffer, frame_data: &FrameData) {
+        self.pipeline
+            .set_uniform_buffer(0, 4, &frame_data.uniform_buffer);
         command_buffer.bind_compute_pipeline(&self.pipeline);
-        command_buffer.dispatch_compute(width as u32 / 16, height as u32 / 16, 1);
+        command_buffer.dispatch_compute(
+            frame_data.width as u32 / 16,
+            frame_data.height as u32 / 16,
+            1,
+        );
     }
 
     pub fn set(

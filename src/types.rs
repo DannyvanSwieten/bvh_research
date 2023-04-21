@@ -100,7 +100,7 @@ impl Default for AABB {
 pub struct Ray {
     pub origin: Origin,
     pub direction: Direction,
-    pub inv_direcion: Direction,
+    pub color: HdrColor,
 }
 
 impl Default for Ray {
@@ -108,7 +108,7 @@ impl Default for Ray {
         Self {
             origin: Origin::new(0.0, 0.0, 0.0),
             direction: Direction::new(1.0, 1.0, 1.0),
-            inv_direcion: Direction::new(1.0, 1.0, 1.0),
+            color: HdrColor::new(1.0, 1.0, 1.0, 1.0),
         }
     }
 }
@@ -118,7 +118,7 @@ impl Ray {
         Self {
             origin,
             direction,
-            inv_direcion: 1.0 / direction,
+            color: HdrColor::new(1.0, 1.0, 1.0, 1.0),
         }
     }
 
