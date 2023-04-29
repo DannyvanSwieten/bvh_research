@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use vk_utils::{
-    buffer_resource::BufferResource, command_buffer::CommandBuffer, device_context::DeviceContext,
+    command_buffer::CommandBuffer, device_context::DeviceContext,
     image2d_resource::Image2DResource, pipeline_descriptor::ComputePipeline,
 };
 
@@ -29,13 +29,20 @@ impl GpuRayAccumulator {
         Self { pipeline }
     }
 
-    pub fn accumulate(&mut self, frame_data: &FrameData, command_buffer: &mut CommandBuffer) {
-        command_buffer.bind_compute_pipeline(&self.pipeline);
-        command_buffer.dispatch_compute(frame_data.width as u32, frame_data.height as u32, 1);
-    }
-
-    pub fn set(&mut self, ray_buffer: &BufferResource, image: &Image2DResource) {
-        self.pipeline.set_storage_buffer(0, 0, ray_buffer);
+    pub fn accumulate(
+        &mut self,
+        command_buffer: &mut CommandBuffer,
+        frame_data: &FrameData,
+        image: &mut Image2DResource,
+    ) {
+        self.pipeline
+            .set_storage_buffer(0, 0, &frame_data.ray_buffer);
         self.pipeline.set_storage_image(0, 1, image);
+        command_buffer.bind_compute_pipeline(&self.pipeline);
+        command_buffer.dispatch_compute(
+            frame_data.resolution.x as u32,
+            frame_data.resolution.y as u32,
+            1,
+        );
     }
 }

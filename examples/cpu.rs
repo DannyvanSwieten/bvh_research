@@ -3,7 +3,7 @@ use std::{rc::Rc, time::Instant};
 use gpu_tracer::{
     bvh::Bvh,
     camera::Camera,
-    frame_buffer::Framebuffer,
+    cpu::frame_buffer::Framebuffer,
     read_triangle_file,
     top_level_acceleration_structure::{Instance, TopLevelAccelerationStructure},
     trace::{CpuTracer, Tracer},

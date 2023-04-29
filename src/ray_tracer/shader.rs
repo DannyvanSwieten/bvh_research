@@ -1,4 +1,15 @@
-pub trait Shader {
+pub trait HitShader {
+    fn uid(&self) -> u32;
+    fn name(&self) -> &str;
+    fn source(&self) -> &str;
+}
+
+pub trait MissShader {
+    fn uid(&self) -> u32;
+    fn name(&self) -> &str;
+    fn source(&self) -> &str;
+}
+pub trait IntersectionShader {
     fn uid(&self) -> u32;
     fn name(&self) -> &str;
     fn source(&self) -> &str;
@@ -12,7 +23,7 @@ impl DiffuseShader {
     }
 }
 
-impl Shader for DiffuseShader {
+impl HitShader for DiffuseShader {
     fn uid(&self) -> u32 {
         0
     }
@@ -44,7 +55,7 @@ impl MirrorShader {
     }
 }
 
-impl Shader for MirrorShader {
+impl HitShader for MirrorShader {
     fn uid(&self) -> u32 {
         1
     }

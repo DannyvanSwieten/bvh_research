@@ -2,7 +2,7 @@ use crossbeam::channel::unbounded;
 use rayon::prelude::*;
 
 use crate::{
-    camera::Camera, frame_buffer::Framebuffer,
+    camera::Camera, cpu::frame_buffer::Framebuffer,
     top_level_acceleration_structure::TopLevelAccelerationStructure, types::HdrColor,
 };
 

@@ -6,9 +6,9 @@ use vk_utils::{
     PhysicalDeviceVulkan12Features,
 };
 
-use crate::types::Vec2;
+use crate::types::{Ray, UVec2, Vec2};
 
-use super::frame_data::FrameData;
+use super::{frame_data::FrameData, gpu_ray_intersector::IntersectionResult};
 
 pub struct Gpu {
     _vulkan: Rc<Vulkan>,
@@ -69,8 +69,7 @@ impl Gpu {
     pub fn create_frame_data(
         &self,
         device_context: Rc<DeviceContext>,
-        width: usize,
-        height: usize,
+        resolution: UVec2,
     ) -> FrameData {
         let mut uniform_buffer = BufferResource::new(
             device_context.clone(),
@@ -79,8 +78,22 @@ impl Gpu {
             BufferUsageFlags::UNIFORM_BUFFER,
         );
 
-        uniform_buffer.upload(&[width as u32, height as u32]);
+        uniform_buffer.upload(&[resolution]);
 
-        FrameData::new(width, height, uniform_buffer)
+        let ray_buffer = BufferResource::new(
+            device_context.clone(),
+            size_of::<Ray>() * resolution.x as usize * resolution.y as usize,
+            MemoryPropertyFlags::DEVICE_LOCAL,
+            BufferUsageFlags::STORAGE_BUFFER | BufferUsageFlags::SHADER_DEVICE_ADDRESS,
+        );
+
+        let intersection_buffer = BufferResource::new(
+            device_context.clone(),
+            size_of::<IntersectionResult>() * resolution.x as usize * resolution.y as usize,
+            MemoryPropertyFlags::DEVICE_LOCAL,
+            BufferUsageFlags::STORAGE_BUFFER | BufferUsageFlags::SHADER_DEVICE_ADDRESS,
+        );
+
+        FrameData::new(resolution, uniform_buffer, ray_buffer, intersection_buffer)
     }
 }

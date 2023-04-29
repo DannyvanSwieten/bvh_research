@@ -2,10 +2,9 @@ pub mod bvh;
 pub mod camera;
 pub mod cpu;
 pub mod cube;
-pub mod frame_buffer;
 pub mod gpu;
-pub mod intersect;
 pub mod material;
+pub mod ray_tracer;
 pub mod scene;
 pub mod top_level_acceleration_structure;
 pub mod trace;
@@ -17,7 +16,7 @@ use gpu::gpu_ray_intersector::IntersectionResult;
 use image::ColorType;
 use types::{Ray, Vertex};
 
-use crate::{frame_buffer::Framebuffer, types::HdrColor};
+use crate::{cpu::frame_buffer::Framebuffer, types::HdrColor};
 
 pub fn read_triangle_file(name: &str) -> (Vec<Vertex>, Vec<u32>) {
     let path = std::env::current_dir()

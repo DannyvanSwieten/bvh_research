@@ -1,7 +1,7 @@
 use cgmath::SquareMatrix;
 
 use crate::{
-    intersect::{intersect_aabb, intersect_triangle},
+    cpu::intersect::{intersect_aabb, intersect_triangle},
     types::{HitRecord, Mat4, Ray, Vec3, Vertex, AABB},
 };
 #[repr(C)]

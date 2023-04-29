@@ -2,7 +2,8 @@ use std::{collections::HashMap, path::Path, rc::Rc};
 
 use vk_utils::{
     buffer_resource::BufferResource, command_buffer::CommandBuffer, device_context::DeviceContext,
-    pipeline_descriptor::ComputePipeline, DescriptorSetLayoutBinding,
+    pipeline_descriptor::ComputePipeline, AccessFlags, DescriptorSetLayoutBinding,
+    PipelineStageFlags,
 };
 
 use super::{frame_data::FrameData, gpu_acceleration_structure::GpuTlas};
@@ -66,27 +67,37 @@ impl GpuRayShader {
         Self { pipeline }
     }
 
-    pub fn shade_rays(&mut self, command_buffer: &mut CommandBuffer, frame_data: &FrameData) {
-        self.pipeline
-            .set_uniform_buffer(0, 3, &frame_data.uniform_buffer);
+    pub fn shade_rays(
+        &mut self,
+        command_buffer: &mut CommandBuffer,
+        frame_data: &FrameData,
+        acceleration_structure: &GpuTlas,
+    ) {
+        self.set(frame_data, acceleration_structure);
         command_buffer.bind_compute_pipeline(&self.pipeline);
         command_buffer.dispatch_compute(
-            frame_data.width as u32 / 16,
-            frame_data.height as u32 / 16,
+            frame_data.resolution.x / 16,
+            frame_data.resolution.y / 16,
             1,
+        );
+        command_buffer.buffer_resource_barrier(
+            &frame_data.ray_buffer,
+            PipelineStageFlags::COMPUTE_SHADER,
+            PipelineStageFlags::COMPUTE_SHADER,
+            AccessFlags::MEMORY_WRITE,
+            AccessFlags::MEMORY_READ,
         );
     }
 
-    pub fn set(
-        &mut self,
-        ray_buffer: &BufferResource,
-        intersection_buffer: &BufferResource,
-        acceleration_structure: &GpuTlas,
-    ) {
-        self.pipeline.set_storage_buffer(0, 0, ray_buffer);
-        self.pipeline.set_storage_buffer(0, 1, intersection_buffer);
+    pub fn set(&mut self, frame_data: &FrameData, acceleration_structure: &GpuTlas) {
+        self.pipeline
+            .set_storage_buffer(0, 0, &frame_data.ray_buffer);
+        self.pipeline
+            .set_storage_buffer(0, 1, &frame_data.intersection_buffer);
         self.pipeline
             .set_storage_buffer(0, 2, &acceleration_structure.instance_buffer);
+        self.pipeline
+            .set_uniform_buffer(0, 3, &frame_data.uniform_buffer);
     }
 
     pub fn set_user_buffer(&mut self, set: usize, binding: usize, buffer: &BufferResource) {

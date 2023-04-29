@@ -1,4 +1,34 @@
+#define M_PI_F 3.14159
 
+const uint primes[] = {
+    2,   3,  5,  7,
+    11, 13, 17, 19,
+    23, 29, 31, 37,
+    41, 43, 47, 53,
+};
+
+// Returns the i'th element of the Halton sequence using the d'th prime number as a
+// base. The Halton sequence is a "low discrepency" sequence: the values appear
+// random but are more evenly distributed then a purely random sequence. Each random
+// value used to render the image should use a different independent dimension 'd',
+// and each sample (frame) should use a different index 'i'. To decorrelate each
+// pixel, a random offset can be applied to 'i'.
+float halton(uint i, uint d) {
+    uint b = primes[d];
+    
+    float f = 1.0f;
+    float invB = 1.0f / b;
+    
+    float r = 0;
+    
+    while (i > 0) {
+        f = f * invB;
+        r = r + f * (i % b);
+        i = i / b;
+    }
+    
+    return r;
+}
 
 // from http://holger.dammertz.org/stuff/notes_HammersleyOnHemisphere.html
 // Hacker's Delight, Henry S. Warren, 2001

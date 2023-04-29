@@ -1,8 +1,8 @@
-use std::{collections::HashMap, mem::size_of, rc::Rc};
+use std::{collections::HashMap, rc::Rc};
 use vk_utils::{
-    buffer_resource::BufferResource, command_buffer::CommandBuffer, device_context::DeviceContext,
-    pipeline_descriptor::ComputePipeline, BufferUsageFlags, DescriptorSetLayoutBinding,
-    DescriptorType, MemoryPropertyFlags, ShaderStageFlags,
+    command_buffer::CommandBuffer, device_context::DeviceContext,
+    pipeline_descriptor::ComputePipeline, AccessFlags, DescriptorSetLayoutBinding, DescriptorType,
+    PipelineStageFlags, ShaderStageFlags,
 };
 
 use super::{frame_data::FrameData, gpu_acceleration_structure::GpuTlas};
@@ -63,53 +63,39 @@ impl GpuIntersector {
         Self { pipeline, device }
     }
 
-    pub fn intersect(&mut self, command_buffer: &mut CommandBuffer, frame_data: &FrameData) {
+    pub fn intersect(
+        &mut self,
+        command_buffer: &mut CommandBuffer,
+        frame_data: &FrameData,
+        acceleration_structure: &GpuTlas,
+    ) {
+        self.set(frame_data, acceleration_structure);
         self.pipeline
             .set_uniform_buffer(0, 4, &frame_data.uniform_buffer);
         command_buffer.bind_compute_pipeline(&self.pipeline);
         command_buffer.dispatch_compute(
-            frame_data.width as u32 / 16,
-            frame_data.height as u32 / 16,
+            frame_data.resolution.x / 16,
+            frame_data.resolution.y / 16,
             1,
+        );
+        command_buffer.buffer_resource_barrier(
+            &frame_data.ray_buffer,
+            PipelineStageFlags::COMPUTE_SHADER,
+            PipelineStageFlags::COMPUTE_SHADER,
+            AccessFlags::MEMORY_WRITE,
+            AccessFlags::MEMORY_READ,
         );
     }
 
-    pub fn set(
-        &mut self,
-        ray_buffer: &BufferResource,
-        intersection_result_buffer: &BufferResource,
-        acceleration_structure: &GpuTlas,
-    ) {
+    fn set(&mut self, frame_data: &FrameData, acceleration_structure: &GpuTlas) {
         self.pipeline
             .set_storage_buffer(0, 0, &acceleration_structure.tlas_buffer);
         self.pipeline
             .set_storage_buffer(0, 1, &acceleration_structure.instance_buffer);
-        self.pipeline.set_storage_buffer(0, 2, ray_buffer);
         self.pipeline
-            .set_storage_buffer(0, 3, intersection_result_buffer);
-    }
-
-    pub fn allocate_intersection_buffer(
-        &self,
-        width: usize,
-        height: usize,
-        host_visible: bool,
-    ) -> BufferResource {
-        let memory_flags = if host_visible {
-            MemoryPropertyFlags::HOST_VISIBLE
-        } else {
-            MemoryPropertyFlags::DEVICE_LOCAL
-        };
-        BufferResource::new(
-            self.device.clone(),
-            self.intersection_buffer_size(width, height),
-            memory_flags,
-            BufferUsageFlags::STORAGE_BUFFER,
-        )
-    }
-
-    pub fn intersection_buffer_size(&self, width: usize, height: usize) -> usize {
-        width * height * size_of::<IntersectionResult>()
+            .set_storage_buffer(0, 2, &frame_data.ray_buffer);
+        self.pipeline
+            .set_storage_buffer(0, 3, &frame_data.intersection_buffer);
     }
 }
 

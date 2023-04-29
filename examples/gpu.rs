@@ -11,7 +11,7 @@ use gpu_tracer::{
         gpu_ray_shader::GpuRayShader,
     },
     read_triangle_file,
-    types::{HdrColor, Mat4, Vertex},
+    types::{HdrColor, Mat4, UVec2, Vertex},
     write_hdr_buffer_to_file,
 };
 
@@ -46,7 +46,7 @@ fn main() {
     .with_data(&vertices);
     let index_buffer = BufferResource::new_host_visible_storage(
         device_context.clone(),
-        size_of::<u32>() * vertices.len(),
+        size_of::<u32>() * indices.len(),
     )
     .with_data(&indices);
     let blas = Rc::new(Blas::new(
@@ -66,13 +66,11 @@ fn main() {
     ));
     let width = 500;
     let height = 500;
-    let frame_data = gpu.create_frame_data(device_context.clone(), width, height);
+    let frame_data = gpu.create_frame_data(device_context.clone(), UVec2::new(width, height));
     let ray_generation_shader = load_shader("ray_gen.glsl");
     let mut gpu_ray_generator =
         GpuRayGenerator::new_from_string(device_context.clone(), &ray_generation_shader, 1, None);
     let mut gpu_intersector = GpuIntersector::new(device_context.clone(), 1);
-    let ray_buffer = gpu_ray_generator.allocate_ray_buffer(&frame_data, false);
-    let intersection_buffer = gpu_intersector.allocate_intersection_buffer(width, height, false);
 
     let ray_shader = load_shader("ray_shader.glsl");
     let mut gpu_shader =
@@ -96,53 +94,16 @@ fn main() {
         frame: 0,
         bounce: 0,
     };
-    gpu_ray_generator.set_ray_buffer(&ray_buffer);
-    gpu_intersector.set(&ray_buffer, &intersection_buffer, &acceleration_structure);
     gpu_shader.set_user_buffer(1, 0, &index_buffer);
     gpu_shader.set_user_buffer(1, 1, &vertex_buffer);
-    gpu_shader.set(&ray_buffer, &intersection_buffer, &acceleration_structure);
-    ray_accumulator.set(&ray_buffer, &image);
     let now = Instant::now();
     let mut command_buffer = CommandBuffer::new(queue.clone());
     command_buffer.begin();
     for _ in 0..4 {
         gpu_ray_generator.generate_rays(&mut command_buffer, &frame_data, Some(&progress));
-
-        command_buffer.buffer_resource_barrier(
-            &ray_buffer,
-            PipelineStageFlags::COMPUTE_SHADER,
-            PipelineStageFlags::COMPUTE_SHADER,
-            AccessFlags::MEMORY_WRITE,
-            AccessFlags::MEMORY_READ,
-        );
-
-        gpu_intersector.intersect(&mut command_buffer, &frame_data);
-        command_buffer.buffer_resource_barrier(
-            &ray_buffer,
-            PipelineStageFlags::COMPUTE_SHADER,
-            PipelineStageFlags::COMPUTE_SHADER,
-            AccessFlags::MEMORY_WRITE,
-            AccessFlags::MEMORY_READ,
-        );
-        command_buffer.buffer_resource_barrier(
-            &intersection_buffer,
-            PipelineStageFlags::COMPUTE_SHADER,
-            PipelineStageFlags::COMPUTE_SHADER,
-            AccessFlags::MEMORY_WRITE,
-            AccessFlags::MEMORY_READ,
-        );
-
-        gpu_shader.shade_rays(&mut command_buffer, &frame_data);
-        command_buffer.buffer_resource_barrier(
-            &ray_buffer,
-            PipelineStageFlags::COMPUTE_SHADER,
-            PipelineStageFlags::COMPUTE_SHADER,
-            AccessFlags::MEMORY_WRITE,
-            AccessFlags::MEMORY_READ,
-        );
-
-        ray_accumulator.accumulate(&frame_data, &mut command_buffer);
-        command_buffer.image_resource_transition(&mut image, ImageLayout::GENERAL);
+        gpu_intersector.intersect(&mut command_buffer, &frame_data, &acceleration_structure);
+        gpu_shader.shade_rays(&mut command_buffer, &frame_data, &acceleration_structure);
+        ray_accumulator.accumulate(&mut command_buffer, &frame_data, &mut image);
         progress.frame += 1
     }
     command_buffer.submit();
@@ -151,7 +112,7 @@ fn main() {
     if debug {
         let mut staging_buffer = BufferResource::new(
             device_context.clone(),
-            width * height * 16,
+            (width * height * 16) as _,
             MemoryPropertyFlags::HOST_VISIBLE,
             BufferUsageFlags::TRANSFER_DST,
         );
@@ -165,8 +126,8 @@ fn main() {
             "accumulation_buffer.png",
             (progress.frame as usize).max(1),
             &pixels,
-            width,
-            height,
+            width as _,
+            height as _,
         );
     }
 }

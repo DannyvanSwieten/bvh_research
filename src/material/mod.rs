@@ -2,10 +2,8 @@ use crate::types::HdrColor;
 
 use self::material_context::MaterialContext;
 
-pub mod material_compiler;
 pub mod material_context;
-pub mod shader;
-pub mod shader_module;
+
 pub trait Material {
     fn upload(&self, ctx: &mut MaterialContext);
     fn shader(&self) -> usize;

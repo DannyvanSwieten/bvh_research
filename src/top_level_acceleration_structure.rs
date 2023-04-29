@@ -4,7 +4,7 @@ use cgmath::Matrix4;
 
 use crate::{
     bvh::Bvh,
-    intersect::intersect_aabb,
+    cpu::intersect::intersect_aabb,
     types::{HitRecord, Ray, AABB},
 };
 
