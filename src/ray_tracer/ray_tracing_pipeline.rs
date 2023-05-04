@@ -35,8 +35,4 @@ impl RayTracingPipeline {
         let ray_shader = GpuRayShader::new_from_string(device, ray_gen_module.source(), 1, None);
         // let shader_binding_table = ShaderBindingTable::new(ray_gen_module, miss_module, hit_module);
     }
-
-    pub fn shader_binding_table(&self) -> &ShaderBindingTable {
-        &self.shader_binding_table
-    }
 }
