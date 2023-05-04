@@ -10,6 +10,7 @@ use gpu_tracer::{
         gpu_ray_intersector::GpuIntersector,
         gpu_ray_shader::GpuRayShader,
     },
+    ray_tracer::shader_compiler::ShaderCompiler,
     read_triangle_file,
     types::{HdrColor, Mat4, UVec2, Vertex},
     write_hdr_buffer_to_file,
@@ -17,8 +18,8 @@ use gpu_tracer::{
 
 use vk_utils::{
     buffer_resource::BufferResource, command_buffer::CommandBuffer,
-    image2d_resource::Image2DResource, queue::CommandQueue, AccessFlags, BufferUsageFlags, Format,
-    ImageLayout, ImageUsageFlags, MemoryPropertyFlags, PipelineStageFlags, QueueFlags,
+    image2d_resource::Image2DResource, queue::CommandQueue, BufferUsageFlags, Format, ImageLayout,
+    ImageUsageFlags, MemoryPropertyFlags, QueueFlags,
 };
 
 fn load_shader(name: &str) -> String {
@@ -27,7 +28,8 @@ fn load_shader(name: &str) -> String {
         .join("example_shaders")
         .join(name);
 
-    std::fs::read_to_string(path).expect("Reading Shader File Failed")
+    let shader_compiler = ShaderCompiler::from_path(&path);
+    shader_compiler.compile()
 }
 #[derive(Clone, Copy)]
 struct Progress {

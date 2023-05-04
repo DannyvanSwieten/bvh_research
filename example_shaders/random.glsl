@@ -62,7 +62,6 @@ uint rand_seed(uint val0, uint val1)
 {
 	uint v0 = val0, v1 = val1, s0 = 0;
 
-	[[unroll]]
 	for (uint n = 0; n < 16; n++)
 	{
 		s0 += 0x9e3779b9;

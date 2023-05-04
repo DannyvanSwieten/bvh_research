@@ -4,10 +4,10 @@ use gpu_tracer::ray_tracer::{
 };
 
 pub fn main() {
-    let random_module = std::env::current_dir()
+    let ray_generation_path = std::env::current_dir()
         .unwrap()
         .join("./example_shaders/ray_gen.glsl");
 
-    let shader_compiler = ShaderCompiler::from_path(&random_module);
+    let shader_compiler = ShaderCompiler::from_path(&ray_generation_path);
     println!("{}", shader_compiler.compile());
 }
