@@ -80,13 +80,13 @@ impl ShaderCompiler {
         result
     }
 
-    pub fn compile(&self) -> String {
+    pub fn compile(&self) -> ShaderModule {
         let mut result = String::new();
         for module in &self.modules {
             result.push_str(module.source());
             result.push('\n');
         }
 
-        result
+        ShaderModule::new("name", &result)
     }
 }

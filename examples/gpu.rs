@@ -11,7 +11,7 @@ use gpu_tracer::{
         gpu_ray_intersector::GpuIntersector,
         gpu_ray_shader::GpuRayShader,
     },
-    ray_tracer::shader_compiler::ShaderCompiler,
+    ray_tracer::{shader_compiler::ShaderCompiler, shader_module::ShaderModule},
     read_triangle_file,
     types::{HdrColor, Mat4, UVec2, Vertex},
     write_hdr_buffer_to_file,
@@ -23,7 +23,7 @@ use vk_utils::{
     ImageUsageFlags, MemoryPropertyFlags, QueueFlags,
 };
 
-fn load_shader(name: &str) -> String {
+fn load_shader(name: &str) -> ShaderModule {
     let path = std::env::current_dir()
         .unwrap()
         .join("example_shaders")
@@ -68,13 +68,11 @@ fn main() {
     let height = 500;
     let frame_data = gpu.create_frame_data(device_context.clone(), UVec2::new(width, height));
     let ray_gen = load_shader("ray_gen.glsl");
-    let mut gpu_ray_generator =
-        GpuRayGenerator::new_from_string(device_context.clone(), &ray_gen, 1, None);
+    let mut gpu_ray_generator = GpuRayGenerator::new(device_context.clone(), &ray_gen, 1, None);
     let mut gpu_intersector = GpuIntersector::new(device_context.clone(), 1);
 
     let ray_shader = load_shader("ray_shader.glsl");
-    let mut gpu_shader =
-        GpuRayShader::new_from_string(device_context.clone(), &ray_shader, 1, None);
+    let mut gpu_shader = GpuRayShader::new(device_context.clone(), &ray_shader, 1, None);
     let mut ray_accumulator = GpuRayAccumulator::new(device_context.clone(), 1);
     let mut image = Image2DResource::new(
         device_context.clone(),

@@ -1,10 +1,12 @@
-use std::{collections::HashMap, path::Path, rc::Rc};
+use std::{collections::HashMap, rc::Rc};
 
 use vk_utils::{
     command_buffer::CommandBuffer, device_context::DeviceContext,
     pipeline_descriptor::ComputePipeline, AccessFlags, DescriptorSetLayoutBinding,
     PipelineStageFlags,
 };
+
+use crate::ray_tracer::shader_module::ShaderModule;
 
 use super::frame_data::FrameData;
 
@@ -16,32 +18,19 @@ pub struct GpuRayGenerator {
 impl GpuRayGenerator {
     pub fn new(
         device: Rc<DeviceContext>,
-        path: &Path,
+        shader_module: &ShaderModule,
         max_frames_in_flight: u32,
         descriptors: Option<HashMap<u32, Vec<DescriptorSetLayoutBinding>>>,
     ) -> Self {
-        let template_path = std::env::current_dir()
-            .unwrap()
-            .join("./assets/ray_gen.comp");
-
-        let ray_gen_src = std::fs::read_to_string(path).expect("Couldn't load Ray generator file");
-        let template_src = std::fs::read_to_string(template_path)
-            .expect("Couldn't load Ray generator template file");
-        let src = template_src + &ray_gen_src;
-
-        let pipeline = ComputePipeline::new_from_source_string(
-            device.clone(),
+        Self::new_from_string(
+            device,
+            shader_module.source(),
             max_frames_in_flight,
-            &src,
-            "main",
             descriptors,
         )
-        .unwrap();
-
-        Self { device, pipeline }
     }
 
-    pub fn new_from_string(
+    fn new_from_string(
         device: Rc<DeviceContext>,
         src: &str,
         max_frames_in_flight: u32,

@@ -2,17 +2,20 @@ use std::rc::Rc;
 
 use crate::gpu::gpu_ray_generator::GpuRayGenerator;
 
-use super::shader::{HitShader, IntersectionShader, MissShader};
+use super::{
+    shader::{HitShader, IntersectionShader, MissShader},
+    shader_module::ShaderModule,
+};
 
 pub struct ShaderBindingTable {
-    ray_generation_shader: Rc<GpuRayGenerator>,
-    ray_hit_shaders: Vec<Rc<dyn HitShader>>,
-    intersection_shaders: Vec<Rc<dyn IntersectionShader>>,
-    miss_shader: Option<Rc<dyn MissShader>>,
+    ray_generation_shader: Rc<ShaderModule>,
+    ray_hit_shaders: Vec<Rc<ShaderModule>>,
+    intersection_shaders: Vec<Rc<ShaderModule>>,
+    miss_shader: Option<Rc<ShaderModule>>,
 }
 
 impl ShaderBindingTable {
-    pub fn new(ray_generation_shader: Rc<GpuRayGenerator>) -> Self {
+    pub fn new(ray_generation_shader: Rc<ShaderModule>) -> Self {
         Self {
             ray_generation_shader,
             ray_hit_shaders: Vec::new(),
@@ -21,23 +24,27 @@ impl ShaderBindingTable {
         }
     }
 
-    pub fn add_hit_shader(&mut self, shader: Rc<dyn HitShader>) {
+    pub fn add_hit_shader(&mut self, shader: Rc<ShaderModule>) {
         self.ray_hit_shaders.push(shader);
     }
 
-    pub fn add_intersection_shader(&mut self, shader: Rc<dyn IntersectionShader>) {
+    pub fn add_intersection_shader(&mut self, shader: Rc<ShaderModule>) {
         self.intersection_shaders.push(shader);
     }
 
-    pub fn ray_generation_shader(&self) -> &Rc<GpuRayGenerator> {
-        &self.ray_generation_shader
+    pub fn ray_generation_shader(&self) -> Rc<ShaderModule> {
+        self.ray_generation_shader.clone()
     }
 
-    pub fn ray_hit_shaders(&self) -> &Vec<Rc<dyn HitShader>> {
+    pub fn ray_hit_shaders(&self) -> &[Rc<ShaderModule>] {
         &self.ray_hit_shaders
     }
 
-    pub fn set_miss_shader(&mut self, shader: Rc<dyn MissShader>) {
+    pub fn set_miss_shader(&mut self, shader: Rc<ShaderModule>) {
         self.miss_shader = Some(shader);
+    }
+
+    pub fn miss_shader(&mut self) -> Option<Rc<ShaderModule>> {
+        self.miss_shader.clone()
     }
 }
