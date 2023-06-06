@@ -1,5 +1,6 @@
 use std::{mem::size_of, rc::Rc, time::Instant};
 
+use cgmath::{vec3, Transform};
 use gpu_tracer::{
     gpu::{
         blas::{Blas, Instance},
@@ -32,10 +33,7 @@ fn load_shader(name: &str) -> String {
     shader_compiler.compile()
 }
 #[derive(Clone, Copy)]
-struct Progress {
-    pub frame: u32,
-    pub bounce: u32,
-}
+struct Params(pub Mat4, pub Mat4, pub u32, pub u32);
 
 fn main() {
     let gpu = Gpu::new("My Application");
@@ -69,9 +67,9 @@ fn main() {
     let width = 500;
     let height = 500;
     let frame_data = gpu.create_frame_data(device_context.clone(), UVec2::new(width, height));
-    let ray_generation_shader = load_shader("ray_gen.glsl");
+    let ray_gen = load_shader("ray_gen.glsl");
     let mut gpu_ray_generator =
-        GpuRayGenerator::new_from_string(device_context.clone(), &ray_generation_shader, 1, None);
+        GpuRayGenerator::new_from_string(device_context.clone(), &ray_gen, 1, None);
     let mut gpu_intersector = GpuIntersector::new(device_context.clone(), 1);
 
     let ray_shader = load_shader("ray_shader.glsl");
@@ -92,21 +90,25 @@ fn main() {
     transition_buffer.image_resource_transition(&mut image, ImageLayout::GENERAL);
     transition_buffer.submit();
 
-    let mut progress = Progress {
-        frame: 0,
-        bounce: 0,
-    };
+    let proj_inverse =
+        cgmath::perspective(cgmath::Deg(45.0), width as f32 / height as f32, 0.01, 100.0)
+            .inverse_transform()
+            .unwrap();
+    let view_inverse = Mat4::from_translation(vec3(-3.0, 0.0, 10.0))
+        .inverse_transform()
+        .unwrap();
+    let mut progress = Params(view_inverse, proj_inverse, 0, 0);
     gpu_shader.set_user_buffer(1, 0, &index_buffer);
     gpu_shader.set_user_buffer(1, 1, &vertex_buffer);
     let now = Instant::now();
     let mut command_buffer = CommandBuffer::new(queue.clone());
     command_buffer.begin();
-    for _ in 0..4 {
+    for _ in 0..32 {
         gpu_ray_generator.generate_rays(&mut command_buffer, &frame_data, Some(&progress));
         gpu_intersector.intersect(&mut command_buffer, &frame_data, &acceleration_structure);
         gpu_shader.shade_rays(&mut command_buffer, &frame_data, &acceleration_structure);
         ray_accumulator.accumulate(&mut command_buffer, &frame_data, &mut image);
-        progress.frame += 1
+        progress.2 += 1
     }
     command_buffer.submit();
     let elapsed_time = now.elapsed();
@@ -126,7 +128,7 @@ fn main() {
         let pixels: Vec<HdrColor> = staging_buffer.copy_data();
         write_hdr_buffer_to_file(
             "accumulation_buffer.png",
-            (progress.frame as usize).max(1),
+            (progress.2 as usize).max(1),
             &pixels,
             width as _,
             height as _,

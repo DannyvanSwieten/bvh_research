@@ -1,22 +1,21 @@
 #include "random.glsl"
 
 layout(push_constant) uniform FrameData {
+    mat4 view_inverse;
+    mat4 proj_inverse;
     uint current_sample;
     uint current_bounce;
 };
 
-Ray create_ray(vec2 resolution, vec2 frag_location, vec3 origin, float z){
-    vec2 norm = frag_location / resolution;
-    vec3 p0 = vec3(-1, 1, z);
-    vec3 p1 = vec3(1, 1, z);
-    vec3 p2 = vec3(-1, -1, z);
+Ray create_ray(vec2 resolution, vec2 frag_location){
+    vec2 st = frag_location / resolution;
+    st = st * 2.0 - 1.0;
+    st.y = -st.y;
 
-    vec3 pixel_position = 
-            p0
-            + (p1 - p0) * norm.x
-            + (p2 - p0) * norm.y;
+    vec3 pixel_position = (proj_inverse * vec4(st, 1, 1)).xyz;
+    vec3 origin = (view_inverse * vec4(0, 0, 0, 1)).xyz;
 
-    vec3 direction = normalize(pixel_position - origin);
+    vec3 direction = (view_inverse * vec4(normalize(pixel_position - origin), 0)).xyz;
     Ray ray;
     ray.origin = origin;
     ray.direction = direction;
@@ -32,5 +31,5 @@ Ray generate_ray(vec2 pixel, vec2 resolution){
     vec2 r = vec2(halton(offset + current_sample, 0),
                         halton(offset + current_sample, 1));
     
-    return create_ray(resolution, pixel + r, vec3(-0.5, 0.0, -3.0), 3.0);
+    return create_ray(resolution, pixel + r);
 }
