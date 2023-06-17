@@ -4,8 +4,8 @@ use cgmath::Matrix4;
 
 use crate::{
     bvh::Bvh,
-    cpu::intersect::intersect_aabb,
-    types::{HitRecord, Ray, AABB},
+    cpu::{cpu_shader_binding_table::ShaderBindingTable, intersect::intersect_aabb},
+    types::{HitRecord, Ray, RayType, AABB},
 };
 
 pub struct TlasNode {
@@ -134,11 +134,23 @@ impl TopLevelAccelerationStructure {
         &self.nodes
     }
 
-    pub fn traverse(&self, ray: &Ray) -> HitRecord {
-        self.traverse_stack(ray)
+    pub fn trace<Context, Payload>(
+        &self,
+        ctx: &Context,
+        sbt: &ShaderBindingTable<Context, Payload>,
+        ray: &Ray,
+        ray_type: RayType,
+    ) -> HitRecord {
+        self.traverse_stack(ctx, sbt, ray, ray_type)
     }
 
-    fn traverse_stack(&self, ray: &Ray) -> HitRecord {
+    fn traverse_stack<Context, Payload>(
+        &self,
+        ctx: &Context,
+        sbt: &ShaderBindingTable<Context, Payload>,
+        ray: &Ray,
+        ray_type: RayType,
+    ) -> HitRecord {
         let mut node_idx = 0;
         let mut stack_ptr = 0;
         let mut stack = [0; 64];
@@ -153,11 +165,16 @@ impl TopLevelAccelerationStructure {
                 for i in first..last {
                     let instance = &self.instances[i];
                     let transform = &instance.transform;
-                    instance.blas.traverse(ray, transform, &mut record);
+                    instance
+                        .blas
+                        .traverse(ray, ray_type, transform, &mut record);
                     if record.t < d {
                         record.object_id = i as _;
                         d = record.t;
                         record.obj_to_world = *transform;
+                        if let RayType::Shadow = ray_type {
+                            break;
+                        }
                     }
                 }
 
@@ -205,6 +222,10 @@ impl TopLevelAccelerationStructure {
             }
         }
 
+        if let RayType::Shadow = ray_type {
+            sbt.closest_hit_shader(record.closest_hit_shader as usize)
+                .execute(ctx, &record);
+        }
         record
     }
 

@@ -1,7 +1,5 @@
-use crate::types::Ray;
+use crate::types::{HitRecord, Ray};
 
-use super::shading_context::ShadingContext;
-
-pub trait RayShader {
-    fn shade(&self, ctx: &ShadingContext) -> Ray;
+pub trait ClosestHitShader<Context> {
+    fn execute(&self, ctx: &Context, record: &HitRecord) -> Ray;
 }
