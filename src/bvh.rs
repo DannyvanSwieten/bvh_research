@@ -2,7 +2,7 @@ use cgmath::SquareMatrix;
 
 use crate::{
     cpu::intersect::{intersect_aabb, intersect_triangle},
-    types::{HitRecord, Mat4, Ray, Vec3, Vertex, AABB},
+    types::{HitRecord, Mat4, Ray, RayType, Vec3, Vertex, AABB},
 };
 #[repr(C)]
 pub struct Node {
@@ -284,7 +284,13 @@ impl Bvh {
         std::mem::size_of::<Node>() * self.nodes.len()
     }
 
-    pub fn traverse(&self, ray: &Ray, transform: &Mat4, hit_record: &mut HitRecord) {
+    pub fn traverse(
+        &self,
+        ray: &Ray,
+        ray_type: RayType,
+        transform: &Mat4,
+        hit_record: &mut HitRecord,
+    ) {
         let mut node_idx = 0;
         let mut stack_ptr = 0;
         let mut stack = [0; 64];
@@ -320,6 +326,9 @@ impl Bvh {
                         hit_record.v = v;
                         hit_record.primitive_id = index as _;
                         hit_record.ray = *ray;
+                        if let RayType::Shadow = ray_type {
+                            break;
+                        }
                     }
                 }
                 if stack_ptr == 0 {

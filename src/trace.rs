@@ -2,53 +2,52 @@ use crossbeam::channel::unbounded;
 use rayon::prelude::*;
 
 use crate::{
-    camera::Camera, cpu::frame_buffer::Framebuffer,
-    top_level_acceleration_structure::TopLevelAccelerationStructure, types::HdrColor,
+    cpu::cpu_shader_binding_table::ShaderBindingTable,
+    top_level_acceleration_structure::TopLevelAccelerationStructure, types::Vec2,
 };
 
-pub trait Tracer {
+pub trait Tracer<Context, Payload> {
     fn trace(
         &self,
-        camera: &Camera,
-        framebuffer: &mut Framebuffer<HdrColor>,
+        ctx: &Context,
+        width: u32,
+        height: u32,
+        shader_binding_table: &ShaderBindingTable<Context, Payload>,
         acceleration_structure: &TopLevelAccelerationStructure,
     );
 }
 
 pub struct CpuTracer {}
-impl Tracer for CpuTracer {
+impl<Context: Send + Sync, Payload: Send + Sync + Default> Tracer<Context, Payload> for CpuTracer {
     fn trace(
         &self,
-        camera: &Camera,
-        framebuffer: &mut Framebuffer<HdrColor>,
+        ctx: &Context,
+        width: u32,
+        height: u32,
+        shader_binding_table: &ShaderBindingTable<Context, Payload>,
         acceleration_structure: &TopLevelAccelerationStructure,
     ) {
-        let width = framebuffer.width();
-        let height = framebuffer.height();
-
         let (tx, rx) = unbounded();
-
         (0..height).into_par_iter().for_each_with(tx, |tx, y| {
-            let mut row = Vec::with_capacity(width);
+            let mut row = Vec::with_capacity(width as usize);
             for x in 0..width {
-                let ray = camera.ray(x, y, width, height);
-
-                let record = acceleration_structure.traverse(&ray);
-                row.push(record);
+                let mut payload = Payload::default();
+                shader_binding_table.ray_generation_shader().execute(
+                    ctx,
+                    acceleration_structure,
+                    shader_binding_table,
+                    &mut payload,
+                    Vec2::new(x as f32, y as f32),
+                    Vec2::new(width as f32, height as f32),
+                );
+                row.push(payload);
             }
-            tx.send((y, row)).expect("send failed");
+
+            tx.send((y, row)).unwrap();
         });
 
         for (row, data) in rx {
-            data.iter().enumerate().for_each(|(x, record)| {
-                if record.t < f32::MAX {
-                    framebuffer.set_pixel(
-                        x,
-                        row,
-                        HdrColor::new(1.0 - record.u - record.v, record.u, record.v, 1.0),
-                    )
-                }
-            });
+            data.iter().enumerate().for_each(|(x, record)| {});
         }
     }
 }

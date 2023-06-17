@@ -97,6 +97,14 @@ impl Default for AABB {
 }
 
 #[derive(Clone, Copy)]
+pub enum RayType {
+    Primary,
+    Shadow,
+    Reflection,
+    Refraction,
+}
+
+#[derive(Clone, Copy)]
 #[repr(C)]
 pub struct Ray {
     pub origin: Origin,
@@ -151,6 +159,7 @@ pub struct HitRecord {
     pub v: f32,
     pub ray: Ray,
     pub object_id: u32,
+    pub closest_hit_shader: u32,
     pub primitive_id: u32,
     pub obj_to_world: Mat4,
 }
@@ -163,9 +172,14 @@ impl HitRecord {
             v: 0.0,
             ray: Ray::default(),
             object_id: 0,
+            closest_hit_shader: 0,
             primitive_id: 0,
             obj_to_world: Mat4::identity(),
         }
+    }
+
+    pub fn hit(&self) -> bool {
+        self.t < f32::MAX
     }
 }
 

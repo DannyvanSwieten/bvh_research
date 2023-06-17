@@ -1,0 +1,101 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'gpu_tracer'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=gpu_tracer"
+                ],
+                "filter": {
+                    "name": "gpu_tracer",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'cpu'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=cpu",
+                    "--package=gpu_tracer"
+                ],
+                "filter": {
+                    "name": "cpu",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'cpu'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=cpu",
+                    "--package=gpu_tracer"
+                ],
+                "filter": {
+                    "name": "cpu",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'gpu'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=gpu",
+                    "--package=gpu_tracer"
+                ],
+                "filter": {
+                    "name": "gpu",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'gpu'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=gpu",
+                    "--package=gpu_tracer"
+                ],
+                "filter": {
+                    "name": "gpu",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
