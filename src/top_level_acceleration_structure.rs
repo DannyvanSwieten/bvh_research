@@ -3,7 +3,7 @@ use std::rc::Rc;
 use cgmath::Matrix4;
 
 use crate::{
-    bvh::Bvh,
+    bvh::BottomLevelAccelerationStructure,
     cpu::{cpu_shader_binding_table::ShaderBindingTable, intersect::intersect_aabb},
     types::{HitRecord, Ray, RayType, AABB},
 };
@@ -32,13 +32,17 @@ impl Default for TlasNode {
 
 #[derive(Clone)]
 pub struct Instance {
-    pub blas: Rc<Bvh>,
+    pub blas: Rc<BottomLevelAccelerationStructure>,
     _id: u32,
     transform: Matrix4<f32>,
 }
 
 impl Instance {
-    pub fn new(blas: Rc<Bvh>, id: u32, transform: Matrix4<f32>) -> Self {
+    pub fn new(
+        blas: Rc<BottomLevelAccelerationStructure>,
+        id: u32,
+        transform: Matrix4<f32>,
+    ) -> Self {
         Self {
             blas,
             _id: id,
@@ -140,8 +144,10 @@ impl TopLevelAccelerationStructure {
         sbt: &ShaderBindingTable<Context, Payload>,
         ray: &Ray,
         ray_type: RayType,
+        payload: &mut Payload,
+        miss_shader_index: usize,
     ) -> HitRecord {
-        self.traverse_stack(ctx, sbt, ray, ray_type)
+        self.traverse_stack(ctx, sbt, ray, ray_type, payload, miss_shader_index)
     }
 
     fn traverse_stack<Context, Payload>(
@@ -150,6 +156,8 @@ impl TopLevelAccelerationStructure {
         sbt: &ShaderBindingTable<Context, Payload>,
         ray: &Ray,
         ray_type: RayType,
+        payload: &mut Payload,
+        miss_shader_index: usize,
     ) -> HitRecord {
         let mut node_idx = 0;
         let mut stack_ptr = 0;
@@ -222,9 +230,30 @@ impl TopLevelAccelerationStructure {
             }
         }
 
-        if let RayType::Shadow = ray_type {
-            sbt.closest_hit_shader(record.closest_hit_shader as usize)
-                .execute(ctx, &record);
+        match ray_type {
+            RayType::Primary => {
+                if record.t < f32::MAX {
+                    {
+                        sbt.closest_hit_shader(record.closest_hit_shader as usize)
+                            .execute(ctx, payload, &record);
+                    }
+                } else {
+                    sbt.miss_shader(miss_shader_index)
+                        .execute(ctx, payload, &record);
+                }
+            }
+            RayType::Shadow => {
+                if record.t < f32::MAX {
+                    {
+                        //sbt.any_hit_shader().execute(ctx, payload, &record);
+                    }
+                } else {
+                    sbt.miss_shader(miss_shader_index)
+                        .execute(ctx, payload, &record);
+                }
+            }
+            RayType::Reflection => todo!(),
+            RayType::Refraction => todo!(),
         }
         record
     }

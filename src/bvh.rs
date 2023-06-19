@@ -23,14 +23,14 @@ impl Default for Node {
         }
     }
 }
-pub struct Bvh {
+pub struct BottomLevelAccelerationStructure {
     vertices: Vec<Vertex>,
     triangles: Vec<u32>,
     indices: Vec<u32>,
     nodes: Vec<Node>,
 }
 
-impl Bvh {
+impl BottomLevelAccelerationStructure {
     pub fn new(vertices: &[Vertex], indices: &[u32]) -> Self {
         // Initialize all nodes to default
         let mut centroids = Vec::new();
@@ -324,7 +324,7 @@ impl Bvh {
                         hit_record.t = t;
                         hit_record.u = u;
                         hit_record.v = v;
-                        hit_record.primitive_id = index as _;
+                        hit_record.primitive_id = triangle as _;
                         hit_record.ray = *ray;
                         if let RayType::Shadow = ray_type {
                             break;

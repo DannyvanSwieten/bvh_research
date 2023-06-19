@@ -33,11 +33,15 @@ impl RayTracingPipeline {
             1,
             None,
         );
-        let hit_shader =
-            GpuRayShader::new_from_string(device.clone(), shader_binding_table.hit, 1, None);
+        let hit_shader = GpuRayShader::new_from_string(
+            device.clone(),
+            shader_binding_table.ray_hit_shaders()[0].source(),
+            1,
+            None,
+        );
         let miss_shader = GpuRayShader::new_from_string(
             device.clone(),
-            shader_binding_table.miss_shader().source(),
+            shader_binding_table.miss_shader().unwrap().source(),
             1,
             None,
         );

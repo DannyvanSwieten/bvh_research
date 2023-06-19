@@ -1,3 +1,4 @@
+pub mod cpu_miss_shader;
 pub mod cpu_ray_generator;
 pub mod cpu_ray_shader;
 pub mod cpu_shader_binding_table;

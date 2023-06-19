@@ -44,7 +44,7 @@ impl ShaderBindingTable {
         self.miss_shader = Some(shader);
     }
 
-    pub fn miss_shader(&mut self) -> Option<Rc<ShaderModule>> {
+    pub fn miss_shader(&self) -> Option<Rc<ShaderModule>> {
         self.miss_shader.clone()
     }
 }

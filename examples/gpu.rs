@@ -72,7 +72,8 @@ fn main() {
     let mut gpu_intersector = GpuIntersector::new(device_context.clone(), 1);
 
     let ray_shader = load_shader("ray_shader.glsl");
-    let mut gpu_shader = GpuRayShader::new(device_context.clone(), &ray_shader, 1, None);
+    let mut gpu_shader =
+        GpuRayShader::new_from_string(device_context.clone(), ray_shader.source(), 1, None);
     let mut ray_accumulator = GpuRayAccumulator::new(device_context.clone(), 1);
     let mut image = Image2DResource::new(
         device_context.clone(),

@@ -7,7 +7,7 @@ use vk_utils::{
 };
 
 use crate::{
-    bvh::Bvh,
+    bvh::BottomLevelAccelerationStructure,
     types::{Mat4, AABB},
 };
 
@@ -25,7 +25,10 @@ impl Blas {
         vertex_buffer: &BufferResource,
         index_buffer: &BufferResource,
     ) -> Self {
-        let bvh = Bvh::new(&vertex_buffer.copy_data(), &index_buffer.copy_data());
+        let bvh = BottomLevelAccelerationStructure::new(
+            &vertex_buffer.copy_data(),
+            &index_buffer.copy_data(),
+        );
         let mut triangle_buffer = BufferResource::new(
             device.clone(),
             size_of::<u32>() * bvh.triangles().len(),

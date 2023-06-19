@@ -9,7 +9,7 @@ pub trait RayGenerationShader<Context, Payload> {
         tlas: &TopLevelAccelerationStructure,
         sbt: &ShaderBindingTable<Context, Payload>,
         payload: &mut Payload,
-        pixel: Vec2,
-        resolution: Vec2,
+        pixel: &Vec2,
+        resolution: &Vec2,
     );
 }
