@@ -1,5 +1,3 @@
-use cgmath::SquareMatrix;
-
 use crate::{
     cpu::intersect::{intersect_aabb, intersect_triangle},
     types::{HitRecord, Mat4, Ray, RayType, Vec3, Vertex, AABB},
@@ -294,7 +292,7 @@ impl BottomLevelAccelerationStructure {
         let mut node_idx = 0;
         let mut stack_ptr = 0;
         let mut stack = [0; 64];
-        let inv_ray = ray.transformed(&transform.invert().unwrap());
+        let inv_ray = ray.transformed(&transform.try_inverse().unwrap());
         let mut d = f32::MAX;
         loop {
             let node = &self.nodes[node_idx];

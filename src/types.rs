@@ -1,9 +1,9 @@
-use cgmath::{InnerSpace, Matrix4, SquareMatrix, Vector2, Vector3, Vector4};
+extern crate nalgebra_glm as glm;
 
-pub type UVec2 = Vector2<u32>;
-pub type Vec2 = Vector2<f32>;
-pub type Vec3 = Vector3<f32>;
-pub type Vec4 = Vector4<f32>;
+pub type UVec2 = glm::UVec2;
+pub type Vec2 = glm::Vec2;
+pub type Vec3 = glm::Vec3;
+pub type Vec4 = glm::Vec4;
 
 pub type TexCoord = Vec2;
 
@@ -14,7 +14,7 @@ pub type Origin = Vec3;
 
 pub type HdrColor = Vec4;
 
-pub type Mat4 = Matrix4<f32>;
+pub type Mat4 = glm::Mat4;
 
 #[derive(Clone, Copy)]
 pub struct Triangle {
@@ -78,11 +78,11 @@ impl AABB {
     }
 
     pub fn transformed(&self, transform: &Mat4) -> Self {
-        let min = (transform * Vec4::new(self.min.x, self.min.y, self.min.z, 1.0)).truncate();
-        let max = (transform * Vec4::new(self.max.x, self.max.y, self.max.z, 1.0)).truncate();
+        let min = (transform * Vec4::new(self.min.x, self.min.y, self.min.z, 1.0)).xyz();
+        let max = (transform * Vec4::new(self.max.x, self.max.y, self.max.z, 1.0)).xyz();
         Self {
-            min: Vector3::new(min.x, min.y, min.z),
-            max: Vector3::new(max.x, max.y, max.z),
+            min: Vec3::new(min.x, min.y, min.z),
+            max: Vec3::new(max.x, max.y, max.z),
         }
     }
 }
@@ -132,23 +132,11 @@ impl Ray {
     }
 
     pub fn transformed(&self, transform: &Mat4) -> Self {
-        let o =
-            (transform * Vec4::new(self.origin.x, self.origin.y, self.origin.z, 1.0)).truncate();
+        let o = (transform * Vec4::new(self.origin.x, self.origin.y, self.origin.z, 1.0)).xyz();
         let d = (transform * Vec4::new(self.direction.x, self.direction.y, self.direction.z, 0.0))
-            .truncate()
+            .xyz()
             .normalize();
-        Self::new(
-            Vector3 {
-                x: o.x,
-                y: o.y,
-                z: o.z,
-            },
-            Vector3 {
-                x: d.x,
-                y: d.y,
-                z: d.z,
-            },
-        )
+        Self::new(Vec3::new(o.x, o.y, o.z), Vec3::new(d.x, d.y, d.z))
     }
 }
 

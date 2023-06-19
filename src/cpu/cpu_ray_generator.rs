@@ -1,6 +1,9 @@
-use crate::{top_level_acceleration_structure::TopLevelAccelerationStructure, types::Vec2};
+use crate::types::Vec2;
 
-use super::cpu_shader_binding_table::ShaderBindingTable;
+use super::{
+    cpu_shader_binding_table::ShaderBindingTable,
+    top_level_acceleration_structure::TopLevelAccelerationStructure,
+};
 
 pub trait RayGenerationShader<Context, Payload> {
     fn execute(

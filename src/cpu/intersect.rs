@@ -1,4 +1,4 @@
-use cgmath::InnerSpace;
+use nalgebra_glm::{cross, dot};
 
 use crate::types::{Ray, Vertex, AABB};
 
@@ -37,10 +37,10 @@ pub fn intersect_triangle(
     u: &mut f32,
     v: &mut f32,
 ) -> bool {
-    let edge1 = *v1 - *v0;
-    let edge2 = *v2 - *v0;
-    let h = ray.direction.cross(edge2);
-    let a = edge1.dot(h);
+    let edge1 = *v1 - v0;
+    let edge2 = *v2 - v0;
+    let h = ray.direction.cross(&edge2);
+    let a = dot(&h, &edge1);
     if a > -0.0001 && a < 0.0001 {
         // Ray is parallel to the triangle
         return false;
@@ -48,16 +48,16 @@ pub fn intersect_triangle(
 
     let f = 1.0 / a;
     let s = ray.origin - *v0;
-    *u = f * s.dot(h);
+    *u = f * dot(&s, &h);
     if !(0.0..=1.0).contains(u) {
         return false;
     }
-    let q = s.cross(edge1);
-    *v = f * ray.direction.dot(q);
+    let q = s.cross(&edge1);
+    *v = f * dot(&ray.direction, &q);
     if *v < 0.0 || *u + *v > 1.0 {
         return false;
     }
 
-    *t = f * edge2.dot(q);
+    *t = f * dot(&edge2, &q);
     *t > 0.000001
 }

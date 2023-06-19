@@ -1,19 +1,19 @@
 use std::{rc::Rc, time::Instant};
 
-use cgmath::InnerSpace;
 use gpu_tracer::{
-    bvh::BottomLevelAccelerationStructure,
-    camera::Camera,
     cpu::{
-        cpu_miss_shader::MissShader, cpu_ray_generator::RayGenerationShader,
-        cpu_ray_shader::ClosestHitShader, cpu_shader_binding_table::ShaderBindingTable,
-        frame_buffer::Framebuffer,
+        bvh::BottomLevelAccelerationStructure,
+        camera::Camera,
+        cpu_miss_shader::MissShader,
+        cpu_ray_generator::RayGenerationShader,
+        cpu_ray_shader::ClosestHitShader,
+        cpu_shader_binding_table::ShaderBindingTable,
+        top_level_acceleration_structure::{Instance, TopLevelAccelerationStructure},
+        trace::{CpuTracer, Tracer},
     },
     read_triangle_file,
-    top_level_acceleration_structure::{Instance, TopLevelAccelerationStructure},
-    trace::{CpuTracer, Tracer},
     types::{Direction, HdrColor, HitRecord, Mat4, Position, RayType, Vec2, Vec3},
-    write_framebuffer_to_file, write_hdr_buffer_to_file,
+    write_hdr_buffer_to_file,
 };
 
 pub struct Ctx {
@@ -62,16 +62,17 @@ impl ClosestHitShader<Ctx, Payload> for MyClosestHitShader {
         let v2 = ctx.vertices[i2];
         let e1 = v1 - v0;
         let e2 = v2 - v0;
-        let normal = e1.cross(e2).normalize();
+        let normal = e1.cross(&e2).normalize();
         let light_dir = Direction::new(1.0, 1.0, -1.0).normalize();
-        let radiance = normal.dot(light_dir).max(0.0);
-        payload.color = HdrColor::new(1.0, 1.0, 1.0, 1.0) * radiance;
+        let radiance = normal.dot(&light_dir).max(0.0);
+        let r = (radiance).sqrt();
+        payload.color = HdrColor::new(r, r, r, 1.0);
     }
 }
 
 pub struct MyMissShader;
 impl MissShader<Ctx, Payload> for MyMissShader {
-    fn execute(&self, ctx: &Ctx, payload: &mut Payload, hit_record: &HitRecord) {
+    fn execute(&self, _: &Ctx, payload: &mut Payload, hit_record: &HitRecord) {
         let d = 0.5 * (hit_record.ray.direction.y + 1.0);
         let c = (1.0 - d) * Vec3::new(1.0, 1.0, 1.0) + d * Vec3::new(0.5, 0.7, 1.0);
         payload.color = HdrColor::new(c.x, c.y, c.z, 1.0)
@@ -91,7 +92,11 @@ fn main() {
     sbt.add_closest_hit_shader(Box::new(MyClosestHitShader {}));
     sbt.add_miss_shader(Box::new(MyMissShader {}));
     let blas = Rc::new(BottomLevelAccelerationStructure::new(&vertices, &indices));
-    let instances = [Instance::new(blas, 0, Mat4::from_scale(0.25))];
+    let instances = [Instance::new(
+        blas,
+        0,
+        nalgebra_glm::scaling(&Vec3::new(0.25, 0.25, 0.25)),
+    )];
     let tlas = TopLevelAccelerationStructure::new(&instances);
     let tracer = CpuTracer {};
 

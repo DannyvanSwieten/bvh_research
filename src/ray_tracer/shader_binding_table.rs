@@ -1,11 +1,6 @@
 use std::rc::Rc;
 
-use crate::gpu::gpu_ray_generator::GpuRayGenerator;
-
-use super::{
-    shader::{HitShader, IntersectionShader, MissShader},
-    shader_module::ShaderModule,
-};
+use super::shader_module::ShaderModule;
 
 pub struct ShaderBindingTable {
     ray_generation_shader: Rc<ShaderModule>,

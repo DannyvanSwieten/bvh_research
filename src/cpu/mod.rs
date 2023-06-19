@@ -1,7 +1,10 @@
+pub mod bvh;
+pub mod camera;
 pub mod cpu_miss_shader;
 pub mod cpu_ray_generator;
 pub mod cpu_ray_shader;
 pub mod cpu_shader_binding_table;
 pub mod frame_buffer;
 pub mod intersect;
-pub mod shading_context;
+pub mod top_level_acceleration_structure;
+pub mod trace;

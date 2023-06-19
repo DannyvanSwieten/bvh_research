@@ -1,13 +1,12 @@
 use std::{mem::size_of, rc::Rc};
 
-use cgmath::SquareMatrix;
 use vk_utils::{
     buffer_resource::BufferResource, device_context::DeviceContext, BufferUsageFlags,
     MemoryPropertyFlags,
 };
 
 use crate::{
-    bvh::BottomLevelAccelerationStructure,
+    cpu::bvh::BottomLevelAccelerationStructure,
     types::{Mat4, AABB},
 };
 

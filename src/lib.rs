@@ -1,13 +1,7 @@
-pub mod bvh;
-pub mod camera;
 pub mod cpu;
 pub mod cube;
 pub mod gpu;
-pub mod material;
 pub mod ray_tracer;
-pub mod scene;
-pub mod top_level_acceleration_structure;
-pub mod trace;
 pub mod types;
 
 use std::io::BufRead;

@@ -1,11 +1,11 @@
 use std::rc::Rc;
 
-use cgmath::Matrix4;
-
 use crate::{
-    bvh::BottomLevelAccelerationStructure,
-    cpu::{cpu_shader_binding_table::ShaderBindingTable, intersect::intersect_aabb},
-    types::{HitRecord, Ray, RayType, AABB},
+    cpu::{
+        bvh::BottomLevelAccelerationStructure, cpu_shader_binding_table::ShaderBindingTable,
+        intersect::intersect_aabb,
+    },
+    types::{HitRecord, Mat4, Ray, RayType, AABB},
 };
 
 pub struct TlasNode {
@@ -34,15 +34,11 @@ impl Default for TlasNode {
 pub struct Instance {
     pub blas: Rc<BottomLevelAccelerationStructure>,
     _id: u32,
-    transform: Matrix4<f32>,
+    transform: Mat4,
 }
 
 impl Instance {
-    pub fn new(
-        blas: Rc<BottomLevelAccelerationStructure>,
-        id: u32,
-        transform: Matrix4<f32>,
-    ) -> Self {
+    pub fn new(blas: Rc<BottomLevelAccelerationStructure>, id: u32, transform: Mat4) -> Self {
         Self {
             blas,
             _id: id,

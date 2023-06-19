@@ -6,7 +6,7 @@ use vk_utils::{
 };
 
 use crate::{
-    bvh::Node,
+    cpu::bvh::Node,
     types::{Mat4, AABB},
 };
 

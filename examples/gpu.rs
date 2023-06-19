@@ -1,6 +1,5 @@
 use std::{mem::size_of, rc::Rc, time::Instant};
 
-use cgmath::{vec3, Transform};
 use gpu_tracer::{
     gpu::{
         blas::{Blas, Instance},
@@ -13,10 +12,11 @@ use gpu_tracer::{
     },
     ray_tracer::{shader_compiler::ShaderCompiler, shader_module::ShaderModule},
     read_triangle_file,
-    types::{HdrColor, Mat4, UVec2, Vertex},
+    types::{HdrColor, Mat4, UVec2, Vec3, Vertex},
     write_hdr_buffer_to_file,
 };
 
+use nalgebra_glm::perspective;
 use vk_utils::{
     buffer_resource::BufferResource, command_buffer::CommandBuffer,
     image2d_resource::Image2DResource, queue::CommandQueue, BufferUsageFlags, Format, ImageLayout,
@@ -54,7 +54,8 @@ fn main() {
         &vertex_buffer,
         &index_buffer,
     ));
-    let gpu_instances = [Instance::new(blas.clone(), 0).with_transform(Mat4::from_scale(0.25))];
+    let gpu_instances = [Instance::new(blas.clone(), 0)
+        .with_transform(nalgebra_glm::scaling(&Vec3::new(0.25, 0.25, 0.25)))];
 
     let debug = true;
 
@@ -88,13 +89,12 @@ fn main() {
     transition_buffer.begin();
     transition_buffer.image_resource_transition(&mut image, ImageLayout::GENERAL);
     transition_buffer.submit();
-
-    let proj_inverse =
-        cgmath::perspective(cgmath::Deg(45.0), width as f32 / height as f32, 0.01, 100.0)
-            .inverse_transform()
-            .unwrap();
-    let view_inverse = Mat4::from_translation(vec3(-3.0, 0.0, 10.0))
-        .inverse_transform()
+    let fov: f32 = 45.0;
+    let proj_inverse = perspective(width as f32 / height as f32, fov.to_radians(), 0.01, 100.0)
+        .try_inverse()
+        .unwrap();
+    let view_inverse = Mat4::new_translation(&Vec3::new(-3.0, 0.0, 10.0))
+        .try_inverse()
         .unwrap();
     let mut progress = Params(view_inverse, proj_inverse, 0, 0);
     gpu_shader.set_user_buffer(1, 0, &index_buffer);

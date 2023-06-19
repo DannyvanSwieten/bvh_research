@@ -1,10 +1,9 @@
 use crossbeam::channel::unbounded;
 use rayon::prelude::*;
 
-use crate::{
-    cpu::cpu_shader_binding_table::ShaderBindingTable,
-    top_level_acceleration_structure::TopLevelAccelerationStructure, types::Vec2,
-};
+use crate::{cpu::cpu_shader_binding_table::ShaderBindingTable, types::Vec2};
+
+use super::top_level_acceleration_structure::TopLevelAccelerationStructure;
 
 pub trait Tracer<Context, Payload> {
     fn trace(
