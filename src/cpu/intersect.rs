@@ -1,4 +1,4 @@
-use nalgebra_glm::{cross, dot};
+use nalgebra_glm::dot;
 
 use crate::types::{Ray, Vertex, AABB};
 

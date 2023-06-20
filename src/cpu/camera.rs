@@ -25,12 +25,12 @@ impl Camera {
         let mut st = st * 2.0 - Vec2::new(1.0, 1.0);
         st.y = -st.y;
 
-        let pixel_position = (self.inv_proj * Vec4::new(st.x, st.y, 1.0, 1.0)).xyz();
         let origin = (self.inv_view * Vec4::new(0.0, 0.0, 0.0, 1.0)).xyz();
+        let target = (self.inv_proj * Vec4::new(st.x, st.y, 1.0, 1.0))
+            .xyz()
+            .normalize();
+        let direction = self.inv_view * Vec4::new(target.x, target.y, target.z, 0.0);
 
-        let direction = (pixel_position - origin).normalize();
-        let direction =
-            (self.inv_view * Vec4::new(direction.x, direction.y, direction.z, 0.0)).xyz();
-        Ray::new(origin, direction)
+        Ray::new(origin, direction.xyz())
     }
 }

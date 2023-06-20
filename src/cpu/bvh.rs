@@ -299,7 +299,7 @@ impl BottomLevelAccelerationStructure {
             if self.nodes[node_idx].primitive_count > 0 {
                 let first = node.first_primitive as usize;
                 let last = first + node.primitive_count as usize;
-                for (index, p) in self.triangles[first..last].iter().enumerate() {
+                for (_, p) in self.triangles[first..last].iter().enumerate() {
                     let mut t = 0.0;
                     let mut u = 0.0;
                     let mut v = 0.0;

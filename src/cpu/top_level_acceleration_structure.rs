@@ -122,8 +122,16 @@ impl TopLevelAccelerationStructure {
             instances: instances.to_vec(),
         };
         this.update_bounds(0, &mut boxes);
-        this.subdivide(0, &mut boxes);
-        this
+        if instances.len() == 2 {
+            this.nodes[0].first_primitive = 0;
+            this.nodes[0].primitive_count = 2;
+            this.nodes[1].first_primitive = 1;
+            this.nodes[1].primitive_count = 0;
+            this
+        } else {
+            this.subdivide(0, &mut boxes);
+            this
+        }
     }
 
     pub fn size(&self) -> u64 {

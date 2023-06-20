@@ -14,6 +14,7 @@ pub type Origin = Vec3;
 
 pub type HdrColor = Vec4;
 
+pub type Mat3 = glm::Mat3;
 pub type Mat4 = glm::Mat4;
 
 #[derive(Clone, Copy)]
