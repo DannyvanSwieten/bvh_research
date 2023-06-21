@@ -217,7 +217,7 @@ impl RayGenerationShader<Ctx, Payload> for MyRayGenerator {
                     break;
                 }
 
-                ray.origin = payload.p + payload.normal * 0.01;
+                ray.origin = payload.p; // + payload.normal * 0.01;
                 ray.direction = payload.next_direction;
             }
 
@@ -256,7 +256,11 @@ impl ClosestHitShader<Ctx, Payload> for MyClosestHitShader {
         payload.next_direction = onb.to_local(&ctx.sampler.sample_hemisphere()).normalize();
 
         payload.normal = normal;
-        payload.color = HdrColor::new(0.5, 0.5, 0.5, 1.0);
+        if hit_record.object_id == 0 {
+            payload.color = HdrColor::new(0.5, 0.5, 0.5, 1.0);
+        } else {
+            payload.color = HdrColor::new(1.0, 0.0, 0.0, 1.0);
+        }
     }
 }
 
@@ -274,26 +278,25 @@ fn main() {
     let (vertices, indices) = read_triangle_file("unity.tri");
     let mut triangle_mesh = TriangleMesh::new(vertices, indices);
     triangle_mesh.center();
+    let mesh = scene.add_mesh(triangle_mesh);
+    scene.create_instance(mesh, nalgebra_glm::scaling(&Vec3::new(1.0, 1.0, 1.0)));
 
     let floor_vertices = vec![
-        Vertex::new(-1.0, -5.0, 0.0),
-        Vertex::new(-1.0, -5.0, 1.0),
-        Vertex::new(1.0, -5.0, 1.0),
-        Vertex::new(1.0, -5.0, -1.0),
+        Vertex::new(-1.0, -15.0, -1.0),
+        Vertex::new(-1.0, -15.0, 1.0),
+        Vertex::new(1.0, -15.0, 1.0),
+        Vertex::new(1.0, -15.0, -1.0),
     ];
 
     let floor_indices = vec![0, 1, 2, 0, 2, 3];
 
     let mesh = scene.add_mesh(TriangleMesh::new(floor_vertices, floor_indices));
-    scene.create_instance(mesh, nalgebra_glm::scaling(&Vec3::new(1000.0, 1.0, 1000.0)));
-
-    let mesh = scene.add_mesh(triangle_mesh);
-    scene.create_instance(mesh, nalgebra_glm::scaling(&Vec3::new(1.0, 1.0, 1.0)));
+    scene.create_instance(mesh, nalgebra_glm::scaling(&Vec3::new(100.0, 1.0, 100.0)));
 
     let width = 640;
     let height = 420;
     let camera = Camera::new(
-        Position::new(1.0, 0.0, -3.0),
+        Position::new(0.0, 0.0, -3.0),
         65.0,
         &Vec2::new(width as f32, height as f32),
     );
@@ -306,7 +309,7 @@ fn main() {
 
     let mut result_buffer = vec![Payload::default(); (width * height) as usize];
     let ctx = Ctx {
-        spp: 1024,
+        spp: 16,
         camera,
         sampler: Box::new(RandomSampler {}),
         scene,

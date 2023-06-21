@@ -125,8 +125,6 @@ impl TopLevelAccelerationStructure {
         if instances.len() == 2 {
             this.nodes[0].first_primitive = 0;
             this.nodes[0].primitive_count = 2;
-            this.nodes[1].first_primitive = 1;
-            this.nodes[1].primitive_count = 0;
             this
         } else {
             this.subdivide(0, &mut boxes);
@@ -174,6 +172,8 @@ impl TopLevelAccelerationStructure {
                 let first = node.first_primitive as usize;
                 let last = first + node.primitive_count as usize;
 
+                let mut hits = Vec::new();
+
                 for i in first..last {
                     let instance = &self.instances[i];
                     let transform = &instance.transform;
@@ -184,9 +184,7 @@ impl TopLevelAccelerationStructure {
                         record.object_id = i as _;
                         d = record.t;
                         record.obj_to_world = *transform;
-                        if let RayType::Shadow = ray_type {
-                            break;
-                        }
+                        hits.push(i);
                     }
                 }
 

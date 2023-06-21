@@ -293,7 +293,6 @@ impl BottomLevelAccelerationStructure {
         let mut stack_ptr = 0;
         let mut stack = [0; 64];
         let inv_ray = ray.transformed(&transform.try_inverse().unwrap());
-        let mut d = f32::MAX;
         loop {
             let node = &self.nodes[node_idx];
             if self.nodes[node_idx].primitive_count > 0 {
@@ -317,8 +316,7 @@ impl BottomLevelAccelerationStructure {
                         &mut u,
                         &mut v,
                     );
-                    if hit && t < d {
-                        d = t;
+                    if hit && t < hit_record.t {
                         hit_record.t = t;
                         hit_record.u = u;
                         hit_record.v = v;
