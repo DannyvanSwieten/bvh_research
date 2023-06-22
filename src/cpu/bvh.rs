@@ -287,12 +287,14 @@ impl BottomLevelAccelerationStructure {
         ray: &Ray,
         ray_type: RayType,
         transform: &Mat4,
-        hit_record: &mut HitRecord,
-    ) {
+        t_max: f32,
+    ) -> Option<HitRecord> {
         let mut node_idx = 0;
         let mut stack_ptr = 0;
         let mut stack = [0; 64];
         let inv_ray = ray.transformed(&transform.try_inverse().unwrap());
+        let mut hit_record = None;
+        let mut d = f32::MAX;
         loop {
             let node = &self.nodes[node_idx];
             if self.nodes[node_idx].primitive_count > 0 {
@@ -316,19 +318,25 @@ impl BottomLevelAccelerationStructure {
                         &mut u,
                         &mut v,
                     );
-                    if hit && t < hit_record.t {
-                        hit_record.t = t;
-                        hit_record.u = u;
-                        hit_record.v = v;
-                        hit_record.primitive_id = triangle as _;
-                        hit_record.ray = *ray;
+                    if hit && t < t_max && t < d {
+                        d = t;
+                        let record = HitRecord {
+                            t,
+                            u,
+                            v,
+                            ray: *ray,
+                            primitive_id: triangle as _,
+                            ..Default::default()
+                        };
+
+                        hit_record = Some(record);
                         if let RayType::Shadow = ray_type {
                             break;
                         }
                     }
                 }
                 if stack_ptr == 0 {
-                    break;
+                    break hit_record;
                 } else {
                     stack_ptr -= 1;
                     node_idx = stack[stack_ptr];
@@ -349,7 +357,7 @@ impl BottomLevelAccelerationStructure {
             }
             if left_distance == f32::MAX {
                 if stack_ptr == 0 {
-                    break;
+                    break hit_record;
                 } else {
                     stack_ptr -= 1;
                     node_idx = stack[stack_ptr];

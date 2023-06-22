@@ -6,5 +6,6 @@ pub mod cpu_ray_shader;
 pub mod cpu_shader_binding_table;
 pub mod frame_buffer;
 pub mod intersect;
+pub mod shape;
 pub mod top_level_acceleration_structure;
 pub mod trace;

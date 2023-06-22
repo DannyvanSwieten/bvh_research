@@ -8,6 +8,8 @@ use crate::{
     types::{HitRecord, Mat4, Ray, RayType, AABB},
 };
 
+use super::shape::Shape;
+
 pub struct TlasNode {
     aabb: AABB,
     first_primitive: u32,
@@ -32,16 +34,16 @@ impl Default for TlasNode {
 
 #[derive(Clone)]
 pub struct Instance {
-    pub blas: Rc<BottomLevelAccelerationStructure>,
-    _id: u32,
+    pub blas: Rc<dyn Shape>,
+    id: u32,
     transform: Mat4,
 }
 
 impl Instance {
-    pub fn new(blas: Rc<BottomLevelAccelerationStructure>, id: u32, transform: Mat4) -> Self {
+    pub fn new(blas: Rc<dyn Shape>, id: u32, transform: Mat4) -> Self {
         Self {
             blas,
-            _id: id,
+            id,
             transform,
         }
     }
@@ -148,7 +150,7 @@ impl TopLevelAccelerationStructure {
         ray_type: RayType,
         payload: &mut Payload,
         miss_shader_index: usize,
-    ) -> HitRecord {
+    ) -> Option<HitRecord> {
         self.traverse_stack(ctx, sbt, ray, ray_type, payload, miss_shader_index)
     }
 
@@ -160,31 +162,28 @@ impl TopLevelAccelerationStructure {
         ray_type: RayType,
         payload: &mut Payload,
         miss_shader_index: usize,
-    ) -> HitRecord {
+    ) -> Option<HitRecord> {
         let mut node_idx = 0;
         let mut stack_ptr = 0;
         let mut stack = [0; 64];
-        let mut record = HitRecord::new();
         let mut d = f32::MAX;
+        let mut record = None;
         loop {
             let node = &self.nodes[node_idx];
             if self.nodes[node_idx].primitive_count > 0 {
                 let first = node.first_primitive as usize;
                 let last = first + node.primitive_count as usize;
 
-                let mut hits = Vec::new();
-
                 for i in first..last {
                     let instance = &self.instances[i];
                     let transform = &instance.transform;
-                    instance
-                        .blas
-                        .traverse(ray, ray_type, transform, &mut record);
-                    if record.t < d {
-                        record.object_id = i as _;
-                        d = record.t;
-                        record.obj_to_world = *transform;
-                        hits.push(i);
+                    if let Some(mut hit_record) =
+                        instance.blas.intersect(ray, ray_type, transform, d)
+                    {
+                        hit_record.object_id = instance.id;
+                        d = hit_record.t;
+                        hit_record.obj_to_world = *transform;
+                        record = Some(hit_record);
                     }
                 }
 
@@ -232,31 +231,22 @@ impl TopLevelAccelerationStructure {
             }
         }
 
-        match ray_type {
-            RayType::Primary => {
-                if record.t < f32::MAX {
-                    {
-                        sbt.closest_hit_shader(record.closest_hit_shader as usize)
-                            .execute(ctx, payload, &record);
-                    }
-                } else {
-                    sbt.miss_shader(miss_shader_index)
+        if let Some(record) = record {
+            match ray_type {
+                RayType::Primary => {
+                    sbt.closest_hit_shader(record.closest_hit_shader as usize)
                         .execute(ctx, payload, &record);
                 }
+
+                RayType::Shadow => {}
+                RayType::Reflection => todo!(),
+                RayType::Refraction => todo!(),
             }
-            RayType::Shadow => {
-                if record.t < f32::MAX {
-                    {
-                        //sbt.any_hit_shader().execute(ctx, payload, &record);
-                    }
-                } else {
-                    sbt.miss_shader(miss_shader_index)
-                        .execute(ctx, payload, &record);
-                }
-            }
-            RayType::Reflection => todo!(),
-            RayType::Refraction => todo!(),
+        } else {
+            sbt.miss_shader(miss_shader_index)
+                .execute(ctx, payload, ray);
         }
+
         record
     }
 
