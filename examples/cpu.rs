@@ -493,7 +493,7 @@ fn main() {
 
     let checker_material_2 =
         scene.add_material(Rc::new(Lambertian::new(Rc::new(CheckerTexture::new(
-            Rc::new(UniformColorTexture::new(HdrColor::new(0.9, 0.3, 0.1, 1.0))),
+            Rc::new(UniformColorTexture::new(HdrColor::new(0.0, 0.0, 0.0, 1.0))),
             Rc::new(UniformColorTexture::new(HdrColor::new(0.9, 0.9, 0.9, 1.0))),
             10.0,
         )))));
