@@ -105,6 +105,12 @@ impl BottomLevelAccelerationStructure {
             node.aabb.max = crate::types::max(&node.aabb.max, &vertices[v1]);
             node.aabb.max = crate::types::max(&node.aabb.max, &vertices[v2]);
         });
+
+        for i in 0..3 {
+            if node.aabb.min[i] == node.aabb.max[i] {
+                node.aabb.max[i] += 0.0001;
+            }
+        }
     }
 
     fn find_split_axis(
@@ -294,14 +300,14 @@ impl BottomLevelAccelerationStructure {
         let mut stack = [0; 64];
         let inv_ray = ray.transformed(&transform.try_inverse().unwrap());
         let mut hit_record = None;
-        let mut d = f32::MAX;
+        let mut d = t_max;
         loop {
             let node = &self.nodes[node_idx];
             if self.nodes[node_idx].primitive_count > 0 {
                 let first = node.first_primitive as usize;
                 let last = first + node.primitive_count as usize;
                 for (_, p) in self.triangles[first..last].iter().enumerate() {
-                    let mut t = 0.0;
+                    let mut t = f32::MAX;
                     let mut u = 0.0;
                     let mut v = 0.0;
 
@@ -318,25 +324,24 @@ impl BottomLevelAccelerationStructure {
                         &mut u,
                         &mut v,
                     );
-                    if hit && t < t_max && t < d {
+                    if hit && t < d {
                         d = t;
-                        let record = HitRecord {
+
+                        hit_record = Some(HitRecord {
                             t,
                             u,
                             v,
                             ray: *ray,
                             primitive_id: triangle as _,
                             ..Default::default()
-                        };
-
-                        hit_record = Some(record);
+                        });
                         if let RayType::Shadow = ray_type {
                             break;
                         }
                     }
                 }
                 if stack_ptr == 0 {
-                    break hit_record;
+                    break;
                 } else {
                     stack_ptr -= 1;
                     node_idx = stack[stack_ptr];
@@ -357,7 +362,7 @@ impl BottomLevelAccelerationStructure {
             }
             if left_distance == f32::MAX {
                 if stack_ptr == 0 {
-                    break hit_record;
+                    break;
                 } else {
                     stack_ptr -= 1;
                     node_idx = stack[stack_ptr];
@@ -370,5 +375,7 @@ impl BottomLevelAccelerationStructure {
                 }
             }
         }
+
+        hit_record
     }
 }

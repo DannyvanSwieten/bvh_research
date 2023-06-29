@@ -1,10 +1,7 @@
 use std::rc::Rc;
 
 use crate::{
-    cpu::{
-        bvh::BottomLevelAccelerationStructure, cpu_shader_binding_table::ShaderBindingTable,
-        intersect::intersect_aabb,
-    },
+    cpu::{cpu_shader_binding_table::ShaderBindingTable, intersect::intersect_aabb},
     types::{HitRecord, Mat4, Ray, RayType, AABB},
 };
 

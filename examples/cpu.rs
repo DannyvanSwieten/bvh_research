@@ -20,7 +20,125 @@ use gpu_tracer::{
     write_hdr_buffer_to_file,
 };
 
+use nalgebra_glm::reflect;
 use rand::random;
+
+pub trait Texture {
+    fn sample(&self, attributes: &SurfaceAttributes) -> HdrColor;
+}
+
+pub struct UniformColorTexture {
+    pub color: HdrColor,
+}
+
+impl UniformColorTexture {
+    pub fn new(color: HdrColor) -> Self {
+        Self { color }
+    }
+}
+
+impl Texture for UniformColorTexture {
+    fn sample(&self, _attributes: &SurfaceAttributes) -> HdrColor {
+        self.color
+    }
+}
+
+pub struct CheckerTexture {
+    pub odd: Rc<dyn Texture>,
+    pub even: Rc<dyn Texture>,
+    pub scale: f32,
+}
+
+impl CheckerTexture {
+    pub fn new(odd: Rc<dyn Texture>, even: Rc<dyn Texture>, scale: f32) -> Self {
+        Self { odd, even, scale }
+    }
+}
+
+impl Texture for CheckerTexture {
+    fn sample(&self, attributes: &SurfaceAttributes) -> HdrColor {
+        let sines =
+            (self.scale * attributes.position.x).sin() * (self.scale * attributes.position.y).sin();
+        if sines < 0.0 {
+            self.odd.sample(attributes)
+        } else {
+            self.even.sample(attributes)
+        }
+    }
+}
+
+pub struct NoiseTexture<NoiseGenerator: noise::NoiseFn<f64, 3>> {
+    pub scale: f64,
+    pub noise_generator: NoiseGenerator,
+}
+
+impl<NoiseGenerator: noise::NoiseFn<f64, 3>> NoiseTexture<NoiseGenerator> {
+    pub fn new(scale: f64, noise_generator: NoiseGenerator) -> Self {
+        Self {
+            scale,
+            noise_generator,
+        }
+    }
+}
+
+impl<NoiseGenerator: noise::NoiseFn<f64, 3>> Texture for NoiseTexture<NoiseGenerator> {
+    fn sample(&self, attributes: &SurfaceAttributes) -> HdrColor {
+        let n = self.noise_generator.get([
+            self.scale * attributes.position.x as f64,
+            self.scale * attributes.position.y as f64,
+            self.scale * attributes.position.z as f64,
+        ]) as f32;
+
+        HdrColor::new(n, n, n, 1.0)
+    }
+}
+
+pub trait Material {
+    fn scatter(&self, sampler: &dyn Sampler, attributes: &SurfaceAttributes) -> Direction;
+    fn bsdf(&self, attributes: &SurfaceAttributes, direction: &Direction) -> HdrColor;
+}
+
+pub struct Lambertian {
+    pub albedo: Rc<dyn Texture>,
+}
+
+impl Lambertian {
+    pub fn new(albedo: Rc<dyn Texture>) -> Self {
+        Self { albedo }
+    }
+}
+
+impl Material for Lambertian {
+    fn scatter(&self, sampler: &dyn Sampler, attributes: &SurfaceAttributes) -> Direction {
+        let onb = OrthoNormalBasis::new(&attributes.normal);
+        onb.to_local(&sampler.sample_hemisphere())
+    }
+
+    fn bsdf(&self, attributes: &SurfaceAttributes, _direction: &Direction) -> HdrColor {
+        self.albedo.sample(attributes)
+    }
+}
+
+pub struct Mirror {
+    pub albedo: Rc<dyn Texture>,
+}
+
+impl Mirror {
+    pub fn new(albedo: Rc<dyn Texture>) -> Self {
+        Self { albedo }
+    }
+}
+
+impl Material for Mirror {
+    fn scatter(&self, sampler: &dyn Sampler, attributes: &SurfaceAttributes) -> Direction {
+        //reflect(&Direction::new(1.0, 1.0, 1.0), &attributes.normal)
+        Direction::new(1.0, 1.0, 1.0)
+    }
+
+    fn bsdf(&self, attributes: &SurfaceAttributes, _direction: &Direction) -> HdrColor {
+        self.albedo.sample(attributes)
+    }
+}
 
 pub struct SphereShape {
     pub radius: f32,
@@ -100,7 +218,8 @@ impl Shape for SphereShape {
         hit_record: &HitRecord,
     ) -> gpu_tracer::cpu::shape::SurfaceAttributes {
         let position = hit_record.ray.origin + hit_record.ray.direction * hit_record.t;
-        let normal = (position - Vec3::new(0.0, 0.0, 0.0)).normalize();
+        let origin = hit_record.obj_to_world * Vec4::new(0.0, 0.0, 0.0, 1.0);
+        let normal = (position - origin.xyz()).normalize();
         let u = 0.5 + normal.x.atan2(normal.z) / (2.0 * std::f32::consts::PI);
         let v = 0.5 - normal.y.asin() / std::f32::consts::PI;
         let uv = Vec2::new(u, v);
@@ -109,76 +228,6 @@ impl Shape for SphereShape {
             normal,
             uv,
         }
-    }
-}
-
-pub trait Texture {
-    fn sample(&self, attributes: &SurfaceAttributes) -> HdrColor;
-}
-
-pub struct UniformColorTexture {
-    pub color: HdrColor,
-}
-
-impl UniformColorTexture {
-    pub fn new(color: HdrColor) -> Self {
-        Self { color }
-    }
-}
-
-impl Texture for UniformColorTexture {
-    fn sample(&self, _attributes: &SurfaceAttributes) -> HdrColor {
-        self.color
-    }
-}
-
-pub struct CheckerTexture {
-    pub odd: Rc<dyn Texture>,
-    pub even: Rc<dyn Texture>,
-    pub scale: f32,
-}
-
-impl CheckerTexture {
-    pub fn new(odd: Rc<dyn Texture>, even: Rc<dyn Texture>, scale: f32) -> Self {
-        Self { odd, even, scale }
-    }
-}
-
-impl Texture for CheckerTexture {
-    fn sample(&self, attributes: &SurfaceAttributes) -> HdrColor {
-        let sines =
-            (self.scale * attributes.position.x).sin() * (self.scale * attributes.position.y).sin();
-        if sines < 0.0 {
-            self.odd.sample(attributes)
-        } else {
-            self.even.sample(attributes)
-        }
-    }
-}
-
-pub trait Material {
-    fn scatter(&self, sampler: &dyn Sampler, attributes: &SurfaceAttributes) -> Direction;
-    fn bsdf(&self, attributes: &SurfaceAttributes, direction: &Direction) -> HdrColor;
-}
-
-pub struct Lambertian {
-    pub albedo: Rc<dyn Texture>,
-}
-
-impl Lambertian {
-    pub fn new(albedo: Rc<dyn Texture>) -> Self {
-        Self { albedo }
-    }
-}
-
-impl Material for Lambertian {
-    fn scatter(&self, sampler: &dyn Sampler, attributes: &SurfaceAttributes) -> Direction {
-        let onb = OrthoNormalBasis::new(&attributes.normal);
-        onb.to_local(&sampler.sample_hemisphere())
-    }
-
-    fn bsdf(&self, attributes: &SurfaceAttributes, _direction: &Direction) -> HdrColor {
-        self.albedo.sample(attributes)
     }
 }
 
@@ -481,7 +530,7 @@ impl MissShader<Ctx, Payload> for MyMissShader {
 
 fn main() {
     let mut scene = Scene::new();
-    let uniform_color_material = scene.add_material(Rc::new(Lambertian::new(Rc::new(
+    let solid_color_material = scene.add_material(Rc::new(Lambertian::new(Rc::new(
         UniformColorTexture::new(HdrColor::new(0.5, 0.5, 0.5, 1.0)),
     ))));
     let checker_material =
@@ -491,50 +540,55 @@ fn main() {
             10.0,
         )))));
 
-    let checker_material_2 =
-        scene.add_material(Rc::new(Lambertian::new(Rc::new(CheckerTexture::new(
-            Rc::new(UniformColorTexture::new(HdrColor::new(0.0, 0.0, 0.0, 1.0))),
-            Rc::new(UniformColorTexture::new(HdrColor::new(0.9, 0.9, 0.9, 1.0))),
-            10.0,
-        )))));
-
-    let (vertices, indices) = read_triangle_file("unity.tri");
-    let mut triangle_mesh = TriangleMesh::new(vertices, indices);
-    triangle_mesh.center();
-    let mesh = scene.add_shape(Rc::new(triangle_mesh));
-    for i in -2..2 {
-        let ship_instance = scene.create_instance(
-            mesh,
-            Mat4::new_translation(&Position::new(i as f32 * 2.0, 0.0, 0.0)),
-        );
-        scene.set_material(ship_instance, checker_material);
-    }
+    let noise_material = scene.add_material(Rc::new(Lambertian::new(Rc::new(NoiseTexture::new(
+        5.0,
+        noise::Fbm::<noise::Perlin>::default(),
+    )))));
 
     let floor_vertices = vec![
-        Vertex::new(-1.0, -10.0, -1.0),
-        Vertex::new(-1.0, -10.0, 1.0),
-        Vertex::new(1.0, -10.0, 1.0),
-        Vertex::new(1.0, -10.0, -1.0),
+        Vertex::new(-1.0, 0.0, -1.0),
+        Vertex::new(-1.0, 0.0, 1.0),
+        Vertex::new(1.0, 0.0, 1.0),
+        Vertex::new(1.0, 0.0, -1.0),
     ];
 
     let floor_indices = vec![0, 1, 2, 0, 2, 3];
 
     let mesh = scene.add_shape(Rc::new(TriangleMesh::new(floor_vertices, floor_indices)));
-    let floor_instance =
-        scene.create_instance(mesh, nalgebra_glm::scaling(&Vec3::new(100.0, 1.0, 100.0)));
+    let floor_instance = scene.create_instance(
+        mesh,
+        nalgebra_glm::translation(&Vec3::new(0.0, -3.0, 0.0))
+            * nalgebra_glm::scaling(&Vec3::new(100.0, 1.0, 100.0)),
+    );
 
-    scene.set_material(floor_instance, uniform_color_material);
+    scene.set_material(floor_instance, solid_color_material);
 
-    let sphere = scene.add_shape(Rc::new(SphereShape::new(2.25)));
+    let sphere = scene.add_shape(Rc::new(SphereShape::new(1.0)));
+    let sphere2 = scene.add_shape(Rc::new(SphereShape::new(100.0)));
+    let sphere_instance =
+        scene.create_instance(sphere, nalgebra_glm::translation(&Vec3::new(2.0, 0.0, 0.0)));
+
     let sphere_instance =
         scene.create_instance(sphere, nalgebra_glm::translation(&Vec3::new(0.0, 0.0, 0.0)));
 
-    scene.set_material(sphere_instance, checker_material_2);
+    scene.set_material(sphere_instance, checker_material);
+
+    let sphere_instance = scene.create_instance(
+        sphere,
+        nalgebra_glm::translation(&Vec3::new(-2.0, 0.0, 0.0)),
+    );
+
+    scene.set_material(sphere_instance, noise_material);
+
+    // let sphere_instance = scene.create_instance(
+    //     sphere2,
+    //     nalgebra_glm::translation(&Vec3::new(0.0, -101.0, 0.0)),
+    // );
 
     let width = 640;
-    let height = 420;
+    let height = 480;
     let camera = Camera::new(
-        Position::new(1.5, 0.0, -5.0),
+        Position::new(0.0, 0.0, -5.0),
         65.0,
         &Vec2::new(width as f32, height as f32),
     );
@@ -547,7 +601,7 @@ fn main() {
 
     let mut result_buffer = vec![Payload::default(); (width * height) as usize];
     let ctx = Ctx {
-        spp: 128,
+        spp: 1024,
         camera,
         sampler: Box::new(RandomSampler {}),
         scene,
