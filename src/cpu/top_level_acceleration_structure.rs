@@ -164,7 +164,7 @@ impl TopLevelAccelerationStructure {
         let mut stack_ptr = 0;
         let mut stack = [0; 64];
         let mut d = f32::MAX;
-        let mut record = None;
+        let mut hits = Vec::new();
         loop {
             let node = &self.nodes[node_idx];
             if self.nodes[node_idx].primitive_count > 0 {
@@ -175,12 +175,12 @@ impl TopLevelAccelerationStructure {
                     let instance = &self.instances[i];
                     let transform = &instance.transform;
                     if let Some(mut hit_record) =
-                        instance.blas.intersect(ray, ray_type, transform, d)
+                        instance.blas.intersect(ray, ray_type, transform, f32::MAX)
                     {
                         hit_record.object_id = instance.id;
                         d = hit_record.t;
                         hit_record.obj_to_world = *transform;
-                        record = Some(hit_record);
+                        hits.push(hit_record);
                     }
                 }
 
@@ -228,6 +228,13 @@ impl TopLevelAccelerationStructure {
             }
         }
 
+        if hits.len() == 2 && hits[0].t > hits[1].t {
+            print!("")
+        }
+
+        let record = hits
+            .into_iter()
+            .min_by(|a, b| a.t.partial_cmp(&b.t).unwrap());
         if let Some(record) = record {
             match ray_type {
                 RayType::Primary => {

@@ -20,8 +20,37 @@ use gpu_tracer::{
     write_hdr_buffer_to_file,
 };
 
-use nalgebra_glm::reflect;
 use rand::random;
+
+pub trait ImageSampler {
+    fn sample_1d(&self, image: &ImageTexture, location: Vec2) -> HdrColor;
+    fn sample_2d(&self, image: &ImageTexture, location: Vec2) -> HdrColor;
+    fn sample_3d(&self, image: &ImageTexture, location: Vec2) -> HdrColor;
+}
+
+pub struct NearestNeighborSampler {}
+
+impl ImageSampler for NearestNeighborSampler {
+    fn sample_1d(&self, image: &ImageTexture, location: Vec2) -> HdrColor {
+        let x = (location.x * image.image.width() as f32) as u32;
+        let pixel = image.image.get_pixel(x, 0);
+        HdrColor::new(pixel[0], pixel[1], pixel[2], pixel[3])
+    }
+
+    fn sample_2d(&self, image: &ImageTexture, location: Vec2) -> HdrColor {
+        let x = (location.x * image.width() as f32) as u32;
+        let y = (location.y * image.height() as f32) as u32;
+        let pixel = image.image.get_pixel(x, y);
+        HdrColor::new(pixel[0], pixel[1], pixel[2], pixel[3])
+    }
+
+    fn sample_3d(&self, image: &ImageTexture, location: Vec2) -> HdrColor {
+        let x = (location.x * image.width() as f32) as u32;
+        let y = (location.y * image.height() as f32) as u32;
+        let pixel = image.image.get_pixel(x, y);
+        HdrColor::new(pixel[0], pixel[1], pixel[2], pixel[3])
+    }
+}
 
 pub trait Texture {
     fn sample(&self, attributes: &SurfaceAttributes) -> HdrColor;
@@ -93,6 +122,23 @@ impl<NoiseGenerator: noise::NoiseFn<f64, 3>> Texture for NoiseTexture<NoiseGener
     }
 }
 
+pub struct ImageTexture {
+    pub image: image::Rgba32FImage,
+}
+
+impl ImageTexture {
+    pub fn new(image: image::Rgba32FImage) -> Self {
+        Self { image }
+    }
+
+    pub fn width(&self) -> u32 {
+        self.image.width()
+    }
+
+    pub fn height(&self) -> u32 {
+        self.image.height()
+    }
+}
 pub trait Material {
     fn scatter(&self, sampler: &dyn Sampler, attributes: &SurfaceAttributes) -> Direction;
     fn bsdf(&self, attributes: &SurfaceAttributes, direction: &Direction) -> HdrColor;
@@ -564,26 +610,20 @@ fn main() {
     scene.set_material(floor_instance, solid_color_material);
 
     let sphere = scene.add_shape(Rc::new(SphereShape::new(1.0)));
-    let sphere2 = scene.add_shape(Rc::new(SphereShape::new(100.0)));
-    let sphere_instance =
-        scene.create_instance(sphere, nalgebra_glm::translation(&Vec3::new(2.0, 0.0, 0.0)));
-
     let sphere_instance =
         scene.create_instance(sphere, nalgebra_glm::translation(&Vec3::new(0.0, 0.0, 0.0)));
 
-    scene.set_material(sphere_instance, checker_material);
+    // let sphere_instance =
+    //     scene.create_instance(sphere, nalgebra_glm::translation(&Vec3::new(2.0, 0.0, 2.0)));
 
-    let sphere_instance = scene.create_instance(
-        sphere,
-        nalgebra_glm::translation(&Vec3::new(-2.0, 0.0, 0.0)),
-    );
-
-    scene.set_material(sphere_instance, noise_material);
+    // scene.set_material(sphere_instance, checker_material);
 
     // let sphere_instance = scene.create_instance(
-    //     sphere2,
-    //     nalgebra_glm::translation(&Vec3::new(0.0, -101.0, 0.0)),
+    //     sphere,
+    //     nalgebra_glm::translation(&Vec3::new(-2.0, 0.0, 0.0)),
     // );
+
+    // scene.set_material(sphere_instance, noise_material);
 
     let width = 640;
     let height = 480;
@@ -601,7 +641,7 @@ fn main() {
 
     let mut result_buffer = vec![Payload::default(); (width * height) as usize];
     let ctx = Ctx {
-        spp: 1024,
+        spp: 16,
         camera,
         sampler: Box::new(RandomSampler {}),
         scene,

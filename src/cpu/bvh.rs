@@ -300,7 +300,7 @@ impl BottomLevelAccelerationStructure {
         let mut stack = [0; 64];
         let inv_ray = ray.transformed(&transform.try_inverse().unwrap());
         let mut hit_record = None;
-        let mut d = t_max;
+        let mut d = f32::MAX;
         loop {
             let node = &self.nodes[node_idx];
             if self.nodes[node_idx].primitive_count > 0 {
@@ -335,9 +335,6 @@ impl BottomLevelAccelerationStructure {
                             primitive_id: triangle as _,
                             ..Default::default()
                         });
-                        if let RayType::Shadow = ray_type {
-                            break;
-                        }
                     }
                 }
                 if stack_ptr == 0 {
