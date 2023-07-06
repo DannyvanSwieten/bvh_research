@@ -291,9 +291,9 @@ impl BottomLevelAccelerationStructure {
     pub fn traverse(
         &self,
         ray: &Ray,
-        ray_type: RayType,
+        _ray_type: RayType,
         transform: &Mat4,
-        t_max: f32,
+        _t_max: f32,
     ) -> Option<HitRecord> {
         let mut node_idx = 0;
         let mut stack_ptr = 0;

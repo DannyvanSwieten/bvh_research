@@ -11,7 +11,7 @@ impl GpuRayTracer {
         Self {}
     }
 
-    pub fn trace(&self, pipeline: &RayTracingPipeline) {
+    pub fn trace(&self, _pipeline: &RayTracingPipeline) {
         unimplemented!()
     }
 }

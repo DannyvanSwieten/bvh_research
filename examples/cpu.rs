@@ -12,7 +12,6 @@ use gpu_tracer::{
         top_level_acceleration_structure::{Instance, TopLevelAccelerationStructure},
         trace::{CpuTracer, Tracer},
     },
-    read_triangle_file,
     types::{
         Direction, HdrColor, HitRecord, Mat4, Position, Ray, RayType, Vec2, Vec3, Vec4, Vertex,
         AABB,
@@ -49,7 +48,7 @@ impl Denoiser {
         Self { width, height }
     }
 
-    pub fn denoise(&self, beauty: &[f32], albedo: &[f32], normal: &[f32]) -> Vec<f32> {
+    pub fn denoise(&self, beauty: &[f32], _albedo: &[f32], _normal: &[f32]) -> Vec<f32> {
         unsafe {
             let mut output = vec![0.0; (self.width * self.height * 3) as usize];
             denoiser_denoise(
@@ -64,7 +63,7 @@ impl Denoiser {
         }
     }
 
-    pub fn denoise_hdr(&self, beauty: &[HdrColor], albedo: &[f32], normal: &[f32]) -> Vec<f32> {
+    pub fn denoise_hdr(&self, beauty: &[HdrColor], _albedo: &[f32], _normal: &[f32]) -> Vec<f32> {
         let beauty = beauty
             .iter()
             .map(|c| Vec3::new(c.x, c.y, c.z))
@@ -242,7 +241,7 @@ impl Mirror {
 }
 
 impl Material for Mirror {
-    fn scatter(&self, sampler: &dyn Sampler, attributes: &SurfaceAttributes) -> Direction {
+    fn scatter(&self, _sampler: &dyn Sampler, _attributes: &SurfaceAttributes) -> Direction {
         //reflect(&Direction::new(1.0, 1.0, 1.0), &attributes.normal)
         Direction::new(1.0, 1.0, 1.0)
     }
@@ -268,7 +267,7 @@ impl Material for Emissive {
         onb.to_local(&sampler.sample_hemisphere())
     }
 
-    fn bsdf(&self, attributes: &SurfaceAttributes, _direction: &Direction) -> HdrColor {
+    fn bsdf(&self, _attributes: &SurfaceAttributes, _direction: &Direction) -> HdrColor {
         HdrColor::new(0.0, 0.0, 0.0, 1.0)
     }
 
@@ -291,7 +290,7 @@ impl Shape for SphereShape {
     fn intersect(
         &self,
         ray: &gpu_tracer::types::Ray,
-        ray_type: RayType,
+        _ray_type: RayType,
         transform: &Mat4,
         t_max: f32,
     ) -> Option<HitRecord> {

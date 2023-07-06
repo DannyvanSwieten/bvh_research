@@ -7,7 +7,7 @@ use crate::gpu::{
     gpu_ray_shader::GpuRayShader,
 };
 
-use super::{shader_binding_table::ShaderBindingTable, shader_module::ShaderModule};
+use super::{shader_binding_table::ShaderBindingTable};
 
 pub struct RayTracingPipeline {
     ray_generator: GpuRayGenerator,
