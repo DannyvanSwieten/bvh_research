@@ -113,7 +113,7 @@ fn main() {
 
     let mut hdr_buffer: Vec<HdrColor> = result_buffer.iter().map(|p| p.color).collect();
     write_hdr_buffer_to_file(
-        "cpu_output.png",
+        "outputs/cpu_output.png",
         ctx.spp,
         &hdr_buffer,
         width as usize,
@@ -127,7 +127,7 @@ fn main() {
         .map(|p| HdrColor::new(p.first_normal.x, p.first_normal.y, p.first_normal.z, 1.0))
         .collect();
     write_hdr_buffer_to_file(
-        "cpu_output_normals.png",
+        "outputs/cpu_output_normals.png",
         ctx.spp,
         &normal_hdr_buffer,
         width as usize,
@@ -138,7 +138,7 @@ fn main() {
 
     let albedo_hdr_buffer: Vec<HdrColor> = result_buffer.iter().map(|p| p.albedo).collect();
     write_hdr_buffer_to_file(
-        "cpu_output_albedo.png",
+        "outputs/cpu_output_albedo.png",
         ctx.spp,
         &albedo_hdr_buffer,
         width as usize,
@@ -168,7 +168,7 @@ fn main() {
     }
 
     write_hdr_buffer_to_file(
-        "cpu_output_denoised_with_auxiliary.png",
+        "outputs/cpu_output_denoised_with_auxiliary.png",
         ctx.spp,
         &hdr_buffer,
         width as usize,
@@ -188,7 +188,7 @@ fn main() {
     }
 
     write_hdr_buffer_to_file(
-        "cpu_output_denoised_no_auxiliary.png",
+        "outputs/cpu_output_denoised_no_auxiliary.png",
         ctx.spp,
         &hdr_buffer,
         width as usize,
