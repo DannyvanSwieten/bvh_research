@@ -1,5 +1,6 @@
 pub mod bvh;
 pub mod camera;
+pub mod cpu_any_hit_shader;
 pub mod cpu_miss_shader;
 pub mod cpu_ray_generator;
 pub mod cpu_ray_shader;

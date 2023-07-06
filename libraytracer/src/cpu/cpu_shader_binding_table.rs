@@ -1,20 +1,25 @@
 use super::{
-    cpu_miss_shader::MissShader, cpu_ray_generator::RayGenerationShader,
-    cpu_ray_shader::ClosestHitShader,
+    cpu_any_hit_shader::AnyHitShader, cpu_miss_shader::MissShader,
+    cpu_ray_generator::RayGenerationShader, cpu_ray_shader::ClosestHitShader,
 };
 
 pub struct ShaderBindingTable<Context, Payload> {
     ray_generation_shader: Box<dyn RayGenerationShader<Context, Payload>>,
     closest_hit_shaders: Vec<Box<dyn ClosestHitShader<Context, Payload>>>,
+    any_hit_shader: Option<Box<dyn AnyHitShader<Context, Payload>>>,
     miss_shaders: Vec<Box<dyn MissShader<Context, Payload>>>,
 }
 
 impl<Context, Payload> ShaderBindingTable<Context, Payload> {
-    pub fn new(ray_generation_shader: Box<dyn RayGenerationShader<Context, Payload>>) -> Self {
+    pub fn new(
+        ray_generation_shader: Box<dyn RayGenerationShader<Context, Payload>>,
+        any_hit_shader: Option<Box<dyn AnyHitShader<Context, Payload>>>,
+    ) -> Self {
         Self {
             ray_generation_shader,
             closest_hit_shaders: Vec::new(),
             miss_shaders: Vec::new(),
+            any_hit_shader,
         }
     }
 
@@ -28,6 +33,10 @@ impl<Context, Payload> ShaderBindingTable<Context, Payload> {
 
     pub fn closest_hit_shader(&self, index: usize) -> &dyn ClosestHitShader<Context, Payload> {
         self.closest_hit_shaders[index].as_ref()
+    }
+
+    pub fn any_hit_shader(&self) -> Option<&dyn AnyHitShader<Context, Payload>> {
+        self.any_hit_shader.as_ref().map(|s| s.as_ref())
     }
 
     pub fn ray_generation_shader(&self) -> &dyn RayGenerationShader<Context, Payload> {

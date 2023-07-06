@@ -192,6 +192,9 @@ impl TopLevelAccelerationStructure {
                         d = hit_record.t;
                         hit_record.obj_to_world = *transform;
                         hits.push(hit_record);
+                        if let RayType::Shadow = ray_type {
+                            break;
+                        }
                     }
                 }
 
@@ -249,7 +252,9 @@ impl TopLevelAccelerationStructure {
                         .execute(ctx, payload, &record);
                 }
 
-                RayType::Shadow => {}
+                RayType::Shadow => {
+                    sbt.any_hit_shader().execute(ctx, payload, &record);
+                }
                 RayType::Reflection => todo!(),
                 RayType::Refraction => todo!(),
             }
