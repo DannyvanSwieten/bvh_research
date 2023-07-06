@@ -22,6 +22,69 @@ use gpu_tracer::{
 
 use rand::random;
 
+#[link(name = "Denoiser")]
+extern "C" {
+    fn denoiser_init();
+    fn denoiser_denoise(
+        width: u32,
+        height: u32,
+        input: *const f32,
+        albedo: *const f32, // optional
+        normal: *const f32, // optional
+        output: *mut f32,
+    );
+}
+
+pub struct Denoiser {
+    width: u32,
+    height: u32,
+}
+
+impl Denoiser {
+    pub fn new(width: u32, height: u32) -> Self {
+        unsafe {
+            denoiser_init();
+        }
+
+        Self { width, height }
+    }
+
+    pub fn denoise(&self, beauty: &[f32], albedo: &[f32], normal: &[f32]) -> Vec<f32> {
+        unsafe {
+            let mut output = vec![0.0; (self.width * self.height * 3) as usize];
+            denoiser_denoise(
+                self.width,
+                self.height,
+                beauty.as_ptr(),
+                std::ptr::null(),
+                std::ptr::null(),
+                output.as_mut_ptr(),
+            );
+            output
+        }
+    }
+
+    pub fn denoise_hdr(&self, beauty: &[HdrColor], albedo: &[f32], normal: &[f32]) -> Vec<f32> {
+        let beauty = beauty
+            .iter()
+            .map(|c| Vec3::new(c.x, c.y, c.z))
+            .collect::<Vec<Vec3>>();
+        let mut output = vec![0.0; (self.width * self.height * 3) as usize];
+        unsafe {
+            denoiser_denoise(
+                self.width,
+                self.height,
+                beauty.as_ptr() as _,
+                std::ptr::null(),
+                std::ptr::null(),
+                output.as_mut_ptr(),
+            );
+
+            output
+        }
+    }
+}
+
 pub trait ImageSampler {
     fn sample_1d(&self, image: &ImageTexture, location: Vec2) -> HdrColor;
     fn sample_2d(&self, image: &ImageTexture, location: Vec2) -> HdrColor;
@@ -142,6 +205,9 @@ impl ImageTexture {
 pub trait Material {
     fn scatter(&self, sampler: &dyn Sampler, attributes: &SurfaceAttributes) -> Direction;
     fn bsdf(&self, attributes: &SurfaceAttributes, direction: &Direction) -> HdrColor;
+    fn emission(&self, _attributes: &SurfaceAttributes) -> HdrColor {
+        HdrColor::new(0.0, 0.0, 0.0, 1.0)
+    }
 }
 
 pub struct Lambertian {
@@ -182,6 +248,31 @@ impl Material for Mirror {
     }
 
     fn bsdf(&self, attributes: &SurfaceAttributes, _direction: &Direction) -> HdrColor {
+        self.albedo.sample(attributes)
+    }
+}
+
+pub struct Emissive {
+    pub albedo: Rc<dyn Texture>,
+}
+
+impl Emissive {
+    pub fn new(albedo: Rc<dyn Texture>) -> Self {
+        Self { albedo }
+    }
+}
+
+impl Material for Emissive {
+    fn scatter(&self, sampler: &dyn Sampler, attributes: &SurfaceAttributes) -> Direction {
+        let onb = OrthoNormalBasis::new(&attributes.normal);
+        onb.to_local(&sampler.sample_hemisphere())
+    }
+
+    fn bsdf(&self, attributes: &SurfaceAttributes, _direction: &Direction) -> HdrColor {
+        HdrColor::new(0.0, 0.0, 0.0, 1.0)
+    }
+
+    fn emission(&self, attributes: &SurfaceAttributes) -> HdrColor {
         self.albedo.sample(attributes)
     }
 }
@@ -494,6 +585,7 @@ unsafe impl Sync for Ctx {}
 #[derive(Clone, Copy, Debug)]
 pub struct Payload {
     pub color: HdrColor,
+    pub emission: HdrColor,
     pub normal: Direction,
     pub next_direction: Direction,
     pub p: Position,
@@ -503,6 +595,7 @@ impl Default for Payload {
     fn default() -> Self {
         Self {
             color: HdrColor::new(0.0, 0.0, 0.0, 0.0),
+            emission: HdrColor::new(0.0, 0.0, 0.0, 0.0),
             next_direction: Direction::new(0.0, 0.0, 0.0),
             normal: Direction::new(0.0, 0.0, 0.0),
             p: Position::new(0.0, 0.0, 0.0),
@@ -525,17 +618,26 @@ impl RayGenerationShader<Ctx, Payload> for MyRayGenerator {
             let mut factor = Vec3::new(1.0, 1.0, 1.0);
             let location = pixel + ctx.sampler.sample2();
             let mut ray = ctx.camera.ray(&location, resolution);
-            for _ in 0..512 {
+            for i in 0..32 {
                 let record = tlas.trace(ctx, sbt, &ray, RayType::Primary, payload, 0);
                 factor.x *= payload.color.x;
                 factor.y *= payload.color.y;
                 factor.z *= payload.color.z;
+                factor.x += payload.emission.x;
+                factor.y += payload.emission.y;
+                factor.z += payload.emission.z;
+
+                if i == 0 {
+                    output_color.x += payload.emission.x;
+                    output_color.y += payload.emission.y;
+                    output_color.z += payload.emission.z;
+                }
 
                 if record.is_none() {
                     break;
                 }
 
-                ray.origin = payload.p + payload.normal * 0.01;
+                ray.origin = payload.p + payload.normal * 0.001;
                 ray.direction = payload.next_direction;
             }
 
@@ -562,6 +664,7 @@ impl ClosestHitShader<Ctx, Payload> for MyClosestHitShader {
         let material = ctx.scene.material(hit_record.object_id as usize);
         payload.next_direction = material.scatter(ctx.sampler.as_ref(), attributes);
         payload.color = material.bsdf(attributes, &hit_record.ray.direction);
+        payload.emission = material.emission(attributes);
     }
 }
 
@@ -591,39 +694,42 @@ fn main() {
         noise::Fbm::<noise::Perlin>::default(),
     )))));
 
+    let emissive_material = scene.add_material(Rc::new(Emissive::new(Rc::new(
+        UniformColorTexture::new(HdrColor::new(10.0, 0.0, 0.0, 1.0)),
+    ))));
+
     let floor_vertices = vec![
-        Vertex::new(-1.0, 0.0, -1.0),
-        Vertex::new(-1.0, 0.0, 1.0),
-        Vertex::new(1.0, 0.0, 1.0),
-        Vertex::new(1.0, 0.0, -1.0),
+        Vertex::new(-100.0, -1.0, -100.0),
+        Vertex::new(-100.0, -1.0, 100.0),
+        Vertex::new(100.0, -1.0, 100.0),
+        Vertex::new(100.0, -1.0, -100.0),
     ];
 
     let floor_indices = vec![0, 1, 2, 0, 2, 3];
 
     let mesh = scene.add_shape(Rc::new(TriangleMesh::new(floor_vertices, floor_indices)));
-    let floor_instance = scene.create_instance(
-        mesh,
-        nalgebra_glm::translation(&Vec3::new(0.0, -3.0, 0.0))
-            * nalgebra_glm::scaling(&Vec3::new(100.0, 1.0, 100.0)),
-    );
-
-    scene.set_material(floor_instance, solid_color_material);
+    let floor_instance =
+        scene.create_instance(mesh, nalgebra_glm::translation(&Vec3::new(0.0, 0.0, 0.0)));
 
     let sphere = scene.add_shape(Rc::new(SphereShape::new(1.0)));
     let sphere_instance =
-        scene.create_instance(sphere, nalgebra_glm::translation(&Vec3::new(0.0, 0.0, 0.0)));
+        scene.create_instance(sphere, nalgebra_glm::translation(&Vec3::new(0.0, 1.0, 0.0)));
 
-    // let sphere_instance =
-    //     scene.create_instance(sphere, nalgebra_glm::translation(&Vec3::new(2.0, 0.0, 2.0)));
+    scene.set_material(sphere_instance, emissive_material);
 
-    // scene.set_material(sphere_instance, checker_material);
+    scene.set_material(floor_instance, solid_color_material);
 
-    // let sphere_instance = scene.create_instance(
-    //     sphere,
-    //     nalgebra_glm::translation(&Vec3::new(-2.0, 0.0, 0.0)),
-    // );
+    let sphere_instance =
+        scene.create_instance(sphere, nalgebra_glm::translation(&Vec3::new(2.0, 0.0, 0.0)));
 
-    // scene.set_material(sphere_instance, noise_material);
+    scene.set_material(sphere_instance, checker_material);
+
+    let sphere_instance = scene.create_instance(
+        sphere,
+        nalgebra_glm::translation(&Vec3::new(-2.0, 0.0, 0.0)),
+    );
+
+    scene.set_material(sphere_instance, noise_material);
 
     let width = 640;
     let height = 480;
@@ -641,7 +747,7 @@ fn main() {
 
     let mut result_buffer = vec![Payload::default(); (width * height) as usize];
     let ctx = Ctx {
-        spp: 16,
+        spp: 32,
         camera,
         sampler: Box::new(RandomSampler {}),
         scene,
@@ -651,9 +757,28 @@ fn main() {
     let elapsed_time = now.elapsed();
     println!("Tracing CPU took {} millis.", elapsed_time.as_millis());
 
-    let hdr_buffer: Vec<HdrColor> = result_buffer.into_iter().map(|p| p.color).collect();
+    let mut hdr_buffer: Vec<HdrColor> = result_buffer.into_iter().map(|p| p.color).collect();
     write_hdr_buffer_to_file(
         "cpu_output.png",
+        ctx.spp,
+        &hdr_buffer,
+        width as usize,
+        height as usize,
+    );
+
+    let denoiser = Denoiser::new(width, height);
+    let denoised_buffer = denoiser.denoise_hdr(&hdr_buffer, &[], &[]);
+    for i in 0..hdr_buffer.len() {
+        let r = denoised_buffer[i * 3];
+        let g = denoised_buffer[i * 3 + 1];
+        let b = denoised_buffer[i * 3 + 2];
+        let a = 1.0f32;
+        let c = HdrColor::new(r, g, b, a);
+        hdr_buffer[i] = c;
+    }
+
+    write_hdr_buffer_to_file(
+        "cpu_output_denoised.png",
         ctx.spp,
         &hdr_buffer,
         width as usize,

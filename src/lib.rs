@@ -141,7 +141,10 @@ pub fn write_hdr_buffer_to_file(
     let pixels: Vec<u8> = buffer
         .iter()
         .flat_map(|result| {
-            let pixel = result * f;
+            let mut pixel = result * f;
+            pixel.x = pixel.x / (1.0 + pixel.x);
+            pixel.y = pixel.y / (1.0 + pixel.y);
+            pixel.z = pixel.z / (1.0 + pixel.z);
             let r = (pixel.x.sqrt() * 255.0) as u8;
             let g = (pixel.y.sqrt() * 255.0) as u8;
             let b = (pixel.z.sqrt() * 255.0) as u8;

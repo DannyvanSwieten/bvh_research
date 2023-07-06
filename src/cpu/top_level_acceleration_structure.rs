@@ -228,10 +228,6 @@ impl TopLevelAccelerationStructure {
             }
         }
 
-        if hits.len() == 2 && hits[0].t > hits[1].t {
-            print!("")
-        }
-
         let record = hits
             .into_iter()
             .min_by(|a, b| a.t.partial_cmp(&b.t).unwrap());
