@@ -253,7 +253,9 @@ impl TopLevelAccelerationStructure {
                 }
 
                 RayType::Shadow => {
-                    sbt.any_hit_shader().execute(ctx, payload, &record);
+                    if let Some(any_hit_shader) = sbt.any_hit_shader() {
+                        any_hit_shader.execute(ctx, payload, &record);
+                    }
                 }
                 RayType::Reflection => todo!(),
                 RayType::Refraction => todo!(),
