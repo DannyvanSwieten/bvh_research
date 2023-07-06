@@ -1,0 +1,11 @@
+C:\Users\danny\Documents\GitHub\bvh_research\target\release\deps\xmlparser-fc78859729fe98f0.rmeta: C:\Users\danny\.cargo\registry\src\index.crates.io-6f17d22bba15001f\xmlparser-0.13.5\src\lib.rs C:\Users\danny\.cargo\registry\src\index.crates.io-6f17d22bba15001f\xmlparser-0.13.5\src\error.rs C:\Users\danny\.cargo\registry\src\index.crates.io-6f17d22bba15001f\xmlparser-0.13.5\src\stream.rs C:\Users\danny\.cargo\registry\src\index.crates.io-6f17d22bba15001f\xmlparser-0.13.5\src\strspan.rs C:\Users\danny\.cargo\registry\src\index.crates.io-6f17d22bba15001f\xmlparser-0.13.5\src\xmlchar.rs
+
+C:\Users\danny\Documents\GitHub\bvh_research\target\release\deps\libxmlparser-fc78859729fe98f0.rlib: C:\Users\danny\.cargo\registry\src\index.crates.io-6f17d22bba15001f\xmlparser-0.13.5\src\lib.rs C:\Users\danny\.cargo\registry\src\index.crates.io-6f17d22bba15001f\xmlparser-0.13.5\src\error.rs C:\Users\danny\.cargo\registry\src\index.crates.io-6f17d22bba15001f\xmlparser-0.13.5\src\stream.rs C:\Users\danny\.cargo\registry\src\index.crates.io-6f17d22bba15001f\xmlparser-0.13.5\src\strspan.rs C:\Users\danny\.cargo\registry\src\index.crates.io-6f17d22bba15001f\xmlparser-0.13.5\src\xmlchar.rs
+
+C:\Users\danny\Documents\GitHub\bvh_research\target\release\deps\xmlparser-fc78859729fe98f0.d: C:\Users\danny\.cargo\registry\src\index.crates.io-6f17d22bba15001f\xmlparser-0.13.5\src\lib.rs C:\Users\danny\.cargo\registry\src\index.crates.io-6f17d22bba15001f\xmlparser-0.13.5\src\error.rs C:\Users\danny\.cargo\registry\src\index.crates.io-6f17d22bba15001f\xmlparser-0.13.5\src\stream.rs C:\Users\danny\.cargo\registry\src\index.crates.io-6f17d22bba15001f\xmlparser-0.13.5\src\strspan.rs C:\Users\danny\.cargo\registry\src\index.crates.io-6f17d22bba15001f\xmlparser-0.13.5\src\xmlchar.rs
+
+C:\Users\danny\.cargo\registry\src\index.crates.io-6f17d22bba15001f\xmlparser-0.13.5\src\lib.rs:
+C:\Users\danny\.cargo\registry\src\index.crates.io-6f17d22bba15001f\xmlparser-0.13.5\src\error.rs:
+C:\Users\danny\.cargo\registry\src\index.crates.io-6f17d22bba15001f\xmlparser-0.13.5\src\stream.rs:
+C:\Users\danny\.cargo\registry\src\index.crates.io-6f17d22bba15001f\xmlparser-0.13.5\src\strspan.rs:
+C:\Users\danny\.cargo\registry\src\index.crates.io-6f17d22bba15001f\xmlparser-0.13.5\src\xmlchar.rs:

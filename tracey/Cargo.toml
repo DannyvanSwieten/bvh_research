@@ -1,0 +1,12 @@
+[package]
+name = "tracey"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+libraytracer = { path = "../libraytracer" }
+tracey_utils = { path = "../tracey_utils" }
+nalgebra-glm = "*"
+noise = "*"
