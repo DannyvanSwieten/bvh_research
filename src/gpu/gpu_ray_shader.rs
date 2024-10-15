@@ -67,12 +67,13 @@ impl GpuRayShader {
     }
 
     pub fn shade_rays(&mut self, command_buffer: &mut CommandBuffer, frame_data: &FrameData) {
+        let (x, y, z) = self.pipeline.workgroup_size();
         self.pipeline
             .set_uniform_buffer(0, 3, &frame_data.uniform_buffer);
         command_buffer.bind_compute_pipeline(&self.pipeline);
         command_buffer.dispatch_compute(
-            frame_data.width as u32 / 16,
-            frame_data.height as u32 / 16,
+            frame_data.width as u32 / x,
+            frame_data.height as u32 / y,
             1,
         );
     }

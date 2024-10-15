@@ -105,7 +105,7 @@ fn main() {
     let now = Instant::now();
     let mut command_buffer = CommandBuffer::new(queue.clone());
     command_buffer.begin();
-    for _ in 0..4 {
+    for _ in 0..16 {
         gpu_ray_generator.generate_rays(&mut command_buffer, &frame_data, Some(&progress));
 
         command_buffer.buffer_resource_barrier(
@@ -145,7 +145,7 @@ fn main() {
         command_buffer.image_resource_transition(&mut image, ImageLayout::GENERAL);
         progress.frame += 1
     }
-    command_buffer.submit();
+    command_buffer.submit().wait();
     let elapsed_time = now.elapsed();
     println!("Tracing GPU took {} millis.", elapsed_time.as_millis());
     if debug {

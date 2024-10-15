@@ -98,6 +98,7 @@ impl GpuRayGenerator {
         frame_data: &FrameData,
         constants: Option<&T>,
     ) {
+        let (x, y, z) = self.pipeline.workgroup_size();
         self.pipeline
             .set_uniform_buffer(0, 1, &frame_data.uniform_buffer);
         command_buffer.bind_compute_pipeline(&self.pipeline);
@@ -106,8 +107,8 @@ impl GpuRayGenerator {
             command_buffer.push_compute_constants(&self.pipeline, 0, constants);
         }
         command_buffer.dispatch_compute(
-            frame_data.width as u32 / 16,
-            frame_data.height as u32 / 16,
+            frame_data.width as u32 / x,
+            frame_data.height as u32 / y,
             1,
         );
     }

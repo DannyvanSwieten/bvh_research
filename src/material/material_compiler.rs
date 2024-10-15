@@ -40,10 +40,10 @@ impl MaterialCompiler {
 
     fn output_library_functions(&self) -> String {
         let mut result = String::new();
-        for (_, module) in &self.modules {
+        self.modules.iter().for_each(|(_, module)| {
             result.push_str(module.source());
             result.push('\n');
-        }
+        });
         result
     }
 
@@ -65,5 +65,11 @@ impl MaterialCompiler {
             result.push('\n')
         }
         result
+    }
+}
+
+impl Default for MaterialCompiler {
+    fn default() -> Self {
+        Self::new()
     }
 }

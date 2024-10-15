@@ -973,30 +973,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "spirv-reflect"
-version = "0.2.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cecc7af6a7d3ca6d15f4d6b5077df89c77ad1f4b314d0cabee221656d041dad7"
-dependencies = [
- "bitflags",
- "cc",
- "num-traits",
- "serde",
- "serde_derive",
- "spirv_headers",
-]
-
-[[package]]
-name = "spirv_headers"
-version = "1.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1f5b132530b1ac069df335577e3581765995cba5a13995cdbbdbc8fb057c532c"
-dependencies = [
- "bitflags",
- "num-traits",
-]
-
-[[package]]
 name = "syn"
 version = "2.0.79"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1117,13 +1093,12 @@ checksum = "852e951cb7832cb45cb1169900d19760cfa39b82bc0ea9c0e5a14ae88411c98b"
 [[package]]
 name = "vk_utils"
 version = "0.1.0"
-source = "git+https://github.com/DannyvanSwieten/vk_utils.git#686268e83d36f45ccb734048a5914eb374ea0c45"
+source = "git+https://github.com/DannyvanSwieten/vk_utils.git#c7aa4bcf4c01e56bf3a92413c1a3a8cf16fca83a"
 dependencies = [
  "ash",
  "byteorder",
  "rspirv-reflect",
  "shaderc",
- "spirv-reflect",
 ]
 
 [[package]]

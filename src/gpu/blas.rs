@@ -1,4 +1,4 @@
-use std::{mem::size_of, rc::Rc};
+use std::rc::Rc;
 
 use cgmath::SquareMatrix;
 use vk_utils::{

@@ -67,13 +67,13 @@ layout(scalar, set = 0, binding = 2) readonly buffer RayBuffer {
     Ray rays[];
 };
 
-layout(scalar, set = 0, binding = 3) writeonly buffer ResultBuffer {
+layout(scalar, set = 0, binding = 3) writeonly buffer ResultBufferName {
     Intersection results[];
-};
+} ResultBuffer;
 
-layout(scalar, set = 0, binding = 4) readonly uniform FrameSettings {
-    ivec2 frame_resolution;
-};
+layout(scalar, set = 0, binding = 4) readonly uniform FrameSettingsName {
+    ivec2 resolution;
+} FrameSettingsBuffer;
 
 #define FLOAT_MAX 10000
 
@@ -304,15 +304,15 @@ float traverse_bttm_level(Ray ray, uint instance_id, inout float u, inout float 
 }
 
 void main(){
-    if(gl_GlobalInvocationID.x < frame_resolution.x && gl_GlobalInvocationID.y < frame_resolution.y)
+    if(gl_GlobalInvocationID.x < FrameSettingsBuffer.resolution.x && gl_GlobalInvocationID.y < FrameSettingsBuffer.resolution.y)
     {
-        uint i = gl_GlobalInvocationID.y * frame_resolution.x + gl_GlobalInvocationID.x;
+        uint i = gl_GlobalInvocationID.y * FrameSettingsBuffer.resolution.x + gl_GlobalInvocationID.x;
         Ray ray = rays[i];
         float u, v;
         uint instance_id = 0;
         uint primitive_id = 0;
         float d = traverse_top_level(ray, u, v, instance_id, primitive_id);
 
-        results[i] = Intersection(vec3(d, u, v), uvec2(instance_id, primitive_id));
+        ResultBuffer.results[i] = Intersection(vec3(d, u, v), uvec2(instance_id, primitive_id));
     }
 }

@@ -11,22 +11,22 @@ struct Ray
     vec3 color;
 };
 
-layout(scalar, set = 0, binding = 0) writeonly buffer RayBuffer {
+layout(scalar, set = 0, binding = 0) writeonly buffer RayBufferName {
     Ray rays[];
-};
+} RayBuffer;
 
-layout(scalar, set = 0, binding = 1) readonly uniform FrameSettings {
-    ivec2 frame_resolution;
-};
+layout(scalar, set = 0, binding = 1) readonly uniform FrameSettingsName {
+    ivec2 resolution;
+}FrameSettingsBuffer;
 
 Ray generate_ray(vec2 pixel, vec2 resolution);
 
 void main()
 {
-    if(gl_GlobalInvocationID.x < frame_resolution.x && gl_GlobalInvocationID.y < frame_resolution.y)
+    if(gl_GlobalInvocationID.x < FrameSettingsBuffer.resolution.x && gl_GlobalInvocationID.y < FrameSettingsBuffer.resolution.y)
     {
-        uint i = gl_GlobalInvocationID.y * frame_resolution.x + gl_GlobalInvocationID.x;
-        rays[i] = generate_ray(gl_GlobalInvocationID.xy, frame_resolution);
+        uint i = gl_GlobalInvocationID.y * FrameSettingsBuffer.resolution.x + gl_GlobalInvocationID.x;
+        RayBuffer.rays[i] = generate_ray(gl_GlobalInvocationID.xy, FrameSettingsBuffer.resolution);
     }
 }
 

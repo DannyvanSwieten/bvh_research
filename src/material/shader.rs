@@ -12,6 +12,12 @@ impl DiffuseShader {
     }
 }
 
+impl Default for DiffuseShader {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Shader for DiffuseShader {
     fn uid(&self) -> u32 {
         0
@@ -41,6 +47,12 @@ pub struct MirrorShader {}
 impl MirrorShader {
     pub fn new() -> Self {
         Self {}
+    }
+}
+
+impl Default for MirrorShader {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

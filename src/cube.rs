@@ -47,6 +47,14 @@ impl Cube {
 
         Self { vertices, indices }
     }
+
+    pub fn vertices(&self) -> &[Vertex] {
+        &self.vertices
+    }
+
+    pub fn indices(&self) -> &[u32] {
+        &self.indices
+    }
 }
 
 impl Default for Cube {
