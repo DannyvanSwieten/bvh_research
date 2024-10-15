@@ -49,7 +49,7 @@ impl GpuTlas {
 
         let mut instance_buffer = BufferResource::new(
             device.clone(),
-            std::mem::size_of::<Instance>() * proxies.len(),
+            std::mem::size_of_val(proxies),
             MemoryPropertyFlags::HOST_VISIBLE,
             BufferUsageFlags::STORAGE_BUFFER,
         );

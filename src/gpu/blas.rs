@@ -28,7 +28,7 @@ impl Blas {
         let bvh = Bvh::new(&vertex_buffer.copy_data(), &index_buffer.copy_data());
         let mut triangle_buffer = BufferResource::new(
             device.clone(),
-            size_of::<u32>() * bvh.triangles().len(),
+            std::mem::size_of_val(bvh.triangles()),
             MemoryPropertyFlags::HOST_VISIBLE,
             BufferUsageFlags::STORAGE_BUFFER | BufferUsageFlags::SHADER_DEVICE_ADDRESS,
         );
