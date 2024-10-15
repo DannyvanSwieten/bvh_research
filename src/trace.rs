@@ -26,29 +26,21 @@ impl Tracer for CpuTracer {
         let width = framebuffer.width();
         let height = framebuffer.height();
 
-        let (tx, rx) = unbounded();
+        let pixels = framebuffer.pixels_mut();
+        let bands: Vec<(usize, &mut [cgmath::Vector4<f32>])> =
+            pixels.chunks_mut(width).enumerate().collect();
 
-        (0..height).into_par_iter().for_each_with(tx, |tx, y| {
-            let mut row = Vec::with_capacity(width);
-            for x in 0..width {
+        bands.into_par_iter().for_each(|(y, row)| {
+            (0..width).for_each(|x| {
                 let ray = camera.ray(x, y, width, height);
 
                 let record = acceleration_structure.traverse(&ray);
-                row.push(record);
-            }
-            tx.send((y, row)).expect("send failed");
-        });
-
-        for (row, data) in rx {
-            data.iter().enumerate().for_each(|(x, record)| {
+                let pixel = &mut row[x];
                 if record.t < f32::MAX {
-                    framebuffer.set_pixel(
-                        x,
-                        row,
-                        HdrColor::new(1.0 - record.u - record.v, record.u, record.v, 1.0),
-                    )
+                    *pixel =
+                        cgmath::Vector4::new(1.0 - record.u - record.v, record.u, record.v, 1.0);
                 }
             });
-        }
+        });
     }
 }

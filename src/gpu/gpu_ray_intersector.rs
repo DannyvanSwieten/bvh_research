@@ -18,30 +18,26 @@ impl GpuIntersector {
             .unwrap()
             .join("./assets/ray_intersector.comp");
         let mut explicit_bindings = HashMap::new();
-        let tlas_buffer_layout_binding = DescriptorSetLayoutBinding::builder()
+        let tlas_buffer_layout_binding = DescriptorSetLayoutBinding::default()
             .binding(0)
             .descriptor_count(1)
             .descriptor_type(DescriptorType::STORAGE_BUFFER)
-            .stage_flags(ShaderStageFlags::COMPUTE)
-            .build();
-        let instance_buffer_layout_binding = DescriptorSetLayoutBinding::builder()
+            .stage_flags(ShaderStageFlags::COMPUTE);
+        let instance_buffer_layout_binding = DescriptorSetLayoutBinding::default()
             .binding(1)
             .descriptor_count(1)
             .descriptor_type(DescriptorType::STORAGE_BUFFER)
-            .stage_flags(ShaderStageFlags::COMPUTE)
-            .build();
-        let ray_buffer_layout_binding = DescriptorSetLayoutBinding::builder()
+            .stage_flags(ShaderStageFlags::COMPUTE);
+        let ray_buffer_layout_binding = DescriptorSetLayoutBinding::default()
             .binding(2)
             .descriptor_count(1)
             .descriptor_type(DescriptorType::STORAGE_BUFFER)
-            .stage_flags(ShaderStageFlags::COMPUTE)
-            .build();
-        let intersection_buffer_layout_binding = DescriptorSetLayoutBinding::builder()
+            .stage_flags(ShaderStageFlags::COMPUTE);
+        let intersection_buffer_layout_binding = DescriptorSetLayoutBinding::default()
             .binding(3)
             .descriptor_count(1)
             .descriptor_type(DescriptorType::STORAGE_BUFFER)
-            .stage_flags(ShaderStageFlags::COMPUTE)
-            .build();
+            .stage_flags(ShaderStageFlags::COMPUTE);
         explicit_bindings.insert(
             0,
             vec![

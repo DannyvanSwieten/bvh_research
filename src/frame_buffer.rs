@@ -49,6 +49,14 @@ impl<P: Clone + std::ops::AddAssign> Framebuffer<P> {
     pub fn iter(&self) -> std::slice::Iter<'_, P> {
         self.pixels.iter()
     }
+
+    pub fn pixels(&self) -> &[P] {
+        &self.pixels
+    }
+
+    pub fn pixels_mut(&mut self) -> &mut [P] {
+        &mut self.pixels
+    }
 }
 
 unsafe impl<P: Clone + std::ops::AddAssign> Send for Framebuffer<P> {}

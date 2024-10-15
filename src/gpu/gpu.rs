@@ -1,8 +1,8 @@
 use std::{mem::size_of, rc::Rc};
 
 use vk_utils::{
-    buffer_resource::BufferResource, device_context::DeviceContext, vulkan::Vulkan,
-    BufferUsageFlags, DebugUtils, MemoryPropertyFlags, PhysicalDeviceFeatures2KHR,
+    buffer_resource::BufferResource, debug_utils, device_context::DeviceContext, vulkan::Vulkan,
+    BufferUsageFlags, MemoryPropertyFlags, PhysicalDeviceFeatures2KHR,
     PhysicalDeviceVulkan12Features,
 };
 
@@ -20,7 +20,7 @@ impl Gpu {
         let vulkan = Vulkan::new(
             application_name,
             &[],
-            &[DebugUtils::name().to_str().unwrap()],
+            &[debug_utils::NAME.to_str().unwrap()],
         );
 
         let physical_devices = vulkan
@@ -47,12 +47,11 @@ impl Gpu {
 
     pub fn create_device(&self, index: usize) -> DeviceContext {
         let gpu = &self.physical_devices[index];
-        let mut address_features = PhysicalDeviceVulkan12Features::builder()
+        let mut address_features = PhysicalDeviceVulkan12Features::default()
             .buffer_device_address(true)
             .shader_input_attachment_array_dynamic_indexing(true)
             .descriptor_indexing(true)
-            .runtime_descriptor_array(true)
-            .build();
+            .runtime_descriptor_array(true);
         let mut features2 = PhysicalDeviceFeatures2KHR::default();
         unsafe {
             gpu.vulkan()
