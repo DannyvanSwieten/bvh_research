@@ -6,7 +6,7 @@ struct Ray
 {
     vec3 origin;
     vec3 direction;
-    vec3 color;
+    vec4 color;
 };
 
 layout(scalar, set = 0, binding = 0) readonly buffer RaysBufferName {
@@ -17,7 +17,13 @@ layout(set = 0, binding = 1, rgba32f) uniform image2D output_buffer;
 
 void main()
 {
+    uvec2 resolution = imageSize(output_buffer);
+    if (gl_GlobalInvocationID.x >= resolution.x || gl_GlobalInvocationID.y >= resolution.y)
+    {
+        return;
+    }
+
     uint i = gl_GlobalInvocationID.y * imageSize(output_buffer).x + gl_GlobalInvocationID.x;
-    vec4 color = imageLoad(output_buffer, ivec2(gl_GlobalInvocationID.xy)) + vec4(RayBuffer.rays[i].color, 1);
+    vec4 color = imageLoad(output_buffer, ivec2(gl_GlobalInvocationID.xy)) + RayBuffer.rays[i].color;
     imageStore(output_buffer, ivec2(gl_GlobalInvocationID.xy), color);
 }

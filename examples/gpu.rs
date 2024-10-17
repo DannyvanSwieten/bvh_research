@@ -11,8 +11,8 @@ use gpu_tracer::{
         gpu_ray_shader::GpuRayShader,
     },
     read_triangle_file,
-    types::{HdrColor, Mat4, Vec3},
-    write_hdr_buffer_to_file,
+    types::{HdrColor, Mat4, Ray, Vec3},
+    write_hdr_buffer_to_file, write_ray_buffer_to_file,
 };
 
 use vk_utils::{
@@ -49,9 +49,9 @@ fn main() {
     ));
     let gpu_instances = [
         Instance::new(blas.clone(), 0).with_transform(Mat4::from_scale(0.25)),
-        Instance::new(blas.clone(), 1).with_transform(
-            Mat4::from_translation(Vec3::new(0.5, 0.5, 2.0)) * Mat4::from_scale(0.25),
-        ),
+        // Instance::new(blas.clone(), 1).with_transform(
+        //     Mat4::from_translation(Vec3::new(0.5, 0.5, 2.0)) * Mat4::from_scale(0.25),
+        // ),
     ];
 
     let debug = true;
@@ -103,7 +103,7 @@ fn main() {
     let now = Instant::now();
     let mut command_buffer = CommandBuffer::new(queue.clone());
     command_buffer.begin();
-    for _ in 0..16 {
+    for _ in 0..1 {
         gpu_ray_generator.generate_rays(&mut command_buffer, &frame_data, Some(&progress));
 
         command_buffer.buffer_resource_barrier(
@@ -116,14 +116,14 @@ fn main() {
 
         gpu_intersector.intersect(&mut command_buffer, &frame_data);
         command_buffer.buffer_resource_barrier(
-            &ray_buffer,
+            &intersection_buffer,
             PipelineStageFlags::COMPUTE_SHADER,
             PipelineStageFlags::COMPUTE_SHADER,
             AccessFlags::MEMORY_WRITE,
             AccessFlags::MEMORY_READ,
         );
         command_buffer.buffer_resource_barrier(
-            &intersection_buffer,
+            &ray_buffer,
             PipelineStageFlags::COMPUTE_SHADER,
             PipelineStageFlags::COMPUTE_SHADER,
             AccessFlags::MEMORY_WRITE,
@@ -143,7 +143,7 @@ fn main() {
         command_buffer.image_resource_transition(&mut image, ImageLayout::GENERAL);
         progress.frame += 1
     }
-    command_buffer.submit().wait();
+    command_buffer.submit();
     let elapsed_time = now.elapsed();
     println!("Tracing GPU took {} millis.", elapsed_time.as_millis());
     if debug {
@@ -166,5 +166,8 @@ fn main() {
             width,
             height,
         );
+
+        // let ray_buffer_data: Vec<Ray> = ray_buffer.copy_data();
+        // write_ray_buffer_to_file("ray_buffer.png", &ray_buffer_data, width, height);
     }
 }

@@ -64,7 +64,7 @@ Ray create_ray(vec2 resolution, vec2 frag_location, vec3 origin, float z){
     Ray ray;
     ray.origin = origin;
     ray.direction = direction;
-    ray.color = vec3(0);
+    ray.color = vec4(0);
     return ray;
 }
 

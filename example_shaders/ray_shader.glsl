@@ -85,15 +85,15 @@ float rand_float(inout uint seed)
 }
 
 Ray shade(Ray ray, uint instance_id, uint primitive_id, float t, vec2 attributes, mat4 transform){
-    if(t < FLOAT_MAX)
+    if(t < 1000 && t > 0)
     {
         uint i0 = indices[primitive_id];
         uint i1 = indices[primitive_id + 1];
         uint i2 = indices[primitive_id + 2];
 
-        vec3 v0 = vertices[i0];
-        vec3 v1 = vertices[i1];
-        vec3 v2 = vertices[i2];
+        vec3 v0 = (transform * vec4(vertices[i0], 1.0)).xyz;
+        vec3 v1 = (transform * vec4(vertices[i1], 1.0)).xyz;
+        vec3 v2 = (transform * vec4(vertices[i2], 1.0)).xyz;
 
         vec3 e0 = v2 - v0;
         vec3 e1 = v1 - v0;
@@ -101,12 +101,13 @@ Ray shade(Ray ray, uint instance_id, uint primitive_id, float t, vec2 attributes
         vec3 L = vec3(1, 1, -1);
         L = normalize(L);
         float I = max(0, dot(N, L));
-        return Ray(vec3(0.1, .2, .5), vec3(0.6, .7, 8), vec3(1) * ray.color + vec3(1) * I);
+        vec3 color = ray.color.xyz + vec3(1) * I;
+        return Ray(vec3(0.1, .2, .5), vec3(0.6, .7, 8), vec4(color, 1.0));
     } 
     else 
     {
         float d = 0.5 * (ray.direction.y + 1.0);
         vec3 color = (1.0 - d) * vec3(1.0, 1.0, 1.0) + d * vec3(0.5, 0.7, 1.0);
-        return Ray(vec3(0.1, .2, .5), vec3(0.6, .7, 8), color);
+        return Ray(vec3(0.1, .2, .5), vec3(0.6, .7, 8), vec4(color, 1.0));
     }
 }

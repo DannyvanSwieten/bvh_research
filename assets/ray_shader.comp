@@ -3,7 +3,7 @@
 #extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
 #extension GL_EXT_scalar_block_layout: require
 
-layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
 #define FLOAT_MAX 10000
 
@@ -11,7 +11,7 @@ struct Ray
 {
     vec3 origin;
     vec3 direction;
-    vec3 color;
+    vec4 color;
 };
 
 struct Intersection{
