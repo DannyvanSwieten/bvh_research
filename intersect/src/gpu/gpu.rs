@@ -54,11 +54,15 @@ impl Gpu {
                 .vk_instance()
                 .get_physical_device_features2(*gpu.vk_physical_device(), &mut features2);
         }
-        gpu.device_context_builder(&["VK_KHR_buffer_device_address"], |builder| {
-            builder
-                .push_next(&mut address_features)
-                .enabled_features(&features2.features)
-        })
+        // turn CStr into a string
+        gpu.device_context_builder(
+            &[vk_utils::buffer_device_address::NAME.to_str().unwrap()],
+            |builder| {
+                builder
+                    .push_next(&mut address_features)
+                    .enabled_features(&features2.features)
+            },
+        )
     }
 
     pub fn create_frame_data(

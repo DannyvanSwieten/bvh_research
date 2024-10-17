@@ -24,9 +24,10 @@ use vk_utils::{
 fn load_shader(name: &str) -> String {
     let path = std::env::current_dir()
         .unwrap()
-        .join("example_shaders")
+        .join("intersect/example_shaders")
         .join(name);
 
+    println!("Reading shader: {}", path.display());
     std::fs::read_to_string(path).expect("Reading Shader File Failed")
 }
 #[derive(Clone, Copy)]
@@ -49,9 +50,9 @@ fn main() {
     ));
     let gpu_instances = [
         Instance::new(blas.clone(), 0).with_transform(Mat4::from_scale(0.25)),
-        // Instance::new(blas.clone(), 1).with_transform(
-        //     Mat4::from_translation(Vec3::new(0.5, 0.5, 2.0)) * Mat4::from_scale(0.25),
-        // ),
+        Instance::new(blas.clone(), 1).with_transform(
+            Mat4::from_translation(Vec3::new(0.5, 0.5, 2.0)) * Mat4::from_scale(0.25),
+        ),
     ];
 
     let debug = true;
@@ -103,7 +104,7 @@ fn main() {
     let now = Instant::now();
     let mut command_buffer = CommandBuffer::new(queue.clone());
     command_buffer.begin();
-    for _ in 0..1 {
+    for _ in 0..16 {
         gpu_ray_generator.generate_rays(&mut command_buffer, &frame_data, Some(&progress));
 
         command_buffer.buffer_resource_barrier(

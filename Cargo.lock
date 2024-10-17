@@ -768,9 +768,9 @@ dependencies = [
 
 [[package]]
 name = "ravif"
-version = "0.11.10"
+version = "0.11.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8f0bfd976333248de2078d350bfdf182ff96e168a24d23d2436cef320dd4bdd"
+checksum = "2413fd96bd0ea5cdeeb37eaf446a22e6ed7b981d792828721e74ded1980a45c6"
 dependencies = [
  "avif-serialize",
  "imgref",
@@ -1059,7 +1059,7 @@ checksum = "852e951cb7832cb45cb1169900d19760cfa39b82bc0ea9c0e5a14ae88411c98b"
 [[package]]
 name = "vk_utils"
 version = "0.1.0"
-source = "git+https://github.com/DannyvanSwieten/vk_utils.git#c7aa4bcf4c01e56bf3a92413c1a3a8cf16fca83a"
+source = "git+https://github.com/DannyvanSwieten/vk_utils.git#804e2ff229033bbb39349e5886cf23c49adfcf14"
 dependencies = [
  "ash",
  "byteorder",

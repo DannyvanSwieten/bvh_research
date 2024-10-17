@@ -47,7 +47,7 @@ impl GpuRayShader {
     ) -> Self {
         let template_path = std::env::current_dir()
             .unwrap()
-            .join("./assets/ray_shader.comp");
+            .join("./intersect/assets/ray_shader.comp");
 
         let template_src = std::fs::read_to_string(template_path)
             .expect("Couldn't load Ray generator template file");

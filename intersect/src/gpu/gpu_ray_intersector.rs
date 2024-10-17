@@ -15,7 +15,7 @@ impl GpuIntersector {
     pub fn new(device: Rc<DeviceContext>, _max_frames_in_flight: usize) -> Self {
         let shader_path = std::env::current_dir()
             .unwrap()
-            .join("./assets/ray_intersector.comp");
+            .join("./intersect/assets/ray_intersector.comp");
 
         let pipeline = ComputePipeline::new_from_source_file(
             shader_path.as_path(),

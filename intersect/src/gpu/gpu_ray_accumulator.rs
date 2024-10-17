@@ -15,7 +15,7 @@ impl GpuRayAccumulator {
     pub fn new(device: Rc<DeviceContext>, max_frames_in_flight: u32) -> Self {
         let shader_path = std::env::current_dir()
             .unwrap()
-            .join("./assets/ray_accumulator.comp");
+            .join("./intersect/assets/ray_accumulator.comp");
 
         let pipeline = ComputePipeline::new_from_source_file(
             &shader_path,
@@ -30,8 +30,13 @@ impl GpuRayAccumulator {
     }
 
     pub fn accumulate(&mut self, frame_data: &FrameData, command_buffer: &mut CommandBuffer) {
+        let (x, y, z) = self.pipeline.workgroup_size();
         command_buffer.bind_compute_pipeline(&self.pipeline);
-        command_buffer.dispatch_compute(frame_data.width as u32, frame_data.height as u32, 1);
+        command_buffer.dispatch_compute(
+            frame_data.width as u32 / x,
+            frame_data.height as u32 / y,
+            1,
+        );
     }
 
     pub fn set(&mut self, ray_buffer: &BufferResource, image: &Image2DResource) {
