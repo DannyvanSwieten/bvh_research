@@ -1,8 +1,7 @@
-use std::{collections::HashMap, mem::size_of, rc::Rc};
+use std::{mem::size_of, rc::Rc};
 use vk_utils::{
     buffer_resource::BufferResource, command_buffer::CommandBuffer, device_context::DeviceContext,
-    pipeline_descriptor::ComputePipeline, BufferUsageFlags, DescriptorSetLayoutBinding,
-    DescriptorType, MemoryPropertyFlags, ShaderStageFlags,
+    pipeline_descriptor::ComputePipeline, BufferUsageFlags, MemoryPropertyFlags,
 };
 
 use super::{frame_data::FrameData, gpu_acceleration_structure::GpuTlas};
@@ -17,36 +16,7 @@ impl GpuIntersector {
         let shader_path = std::env::current_dir()
             .unwrap()
             .join("./assets/ray_intersector.comp");
-        let mut explicit_bindings = HashMap::new();
-        let tlas_buffer_layout_binding = DescriptorSetLayoutBinding::default()
-            .binding(0)
-            .descriptor_count(1)
-            .descriptor_type(DescriptorType::STORAGE_BUFFER)
-            .stage_flags(ShaderStageFlags::COMPUTE);
-        let instance_buffer_layout_binding = DescriptorSetLayoutBinding::default()
-            .binding(1)
-            .descriptor_count(1)
-            .descriptor_type(DescriptorType::STORAGE_BUFFER)
-            .stage_flags(ShaderStageFlags::COMPUTE);
-        let ray_buffer_layout_binding = DescriptorSetLayoutBinding::default()
-            .binding(2)
-            .descriptor_count(1)
-            .descriptor_type(DescriptorType::STORAGE_BUFFER)
-            .stage_flags(ShaderStageFlags::COMPUTE);
-        let intersection_buffer_layout_binding = DescriptorSetLayoutBinding::default()
-            .binding(3)
-            .descriptor_count(1)
-            .descriptor_type(DescriptorType::STORAGE_BUFFER)
-            .stage_flags(ShaderStageFlags::COMPUTE);
-        explicit_bindings.insert(
-            0,
-            vec![
-                tlas_buffer_layout_binding,
-                instance_buffer_layout_binding,
-                ray_buffer_layout_binding,
-                intersection_buffer_layout_binding,
-            ],
-        );
+
         let pipeline = ComputePipeline::new_from_source_file(
             shader_path.as_path(),
             device.clone(),
@@ -60,7 +30,7 @@ impl GpuIntersector {
     }
 
     pub fn intersect(&mut self, command_buffer: &mut CommandBuffer, frame_data: &FrameData) {
-        let (x, y, z) = self.pipeline.workgroup_size();
+        let (x, y, _z) = self.pipeline.workgroup_size();
         self.pipeline
             .set_uniform_buffer(0, 4, &frame_data.uniform_buffer);
         command_buffer.bind_compute_pipeline(&self.pipeline);

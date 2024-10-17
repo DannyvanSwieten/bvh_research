@@ -122,6 +122,9 @@ impl TopLevelAccelerationStructure {
             instances: instances.to_vec(),
         };
         this.update_bounds(0, &mut boxes);
+        if this.nodes()[0].primitive_count > 2 {
+            this.subdivide(0, &mut boxes);
+        }
         this.subdivide(0, &mut boxes);
         this
     }

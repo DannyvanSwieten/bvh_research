@@ -103,7 +103,7 @@ fn main() {
     let now = Instant::now();
     let mut command_buffer = CommandBuffer::new(queue.clone());
     command_buffer.begin();
-    for _ in 0..2 {
+    for _ in 0..16 {
         gpu_ray_generator.generate_rays(&mut command_buffer, &frame_data, Some(&progress));
 
         command_buffer.buffer_resource_barrier(
