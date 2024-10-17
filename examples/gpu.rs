@@ -1,4 +1,4 @@
-use std::{mem::size_of, rc::Rc, time::Instant};
+use std::{rc::Rc, time::Instant};
 
 use gpu_tracer::{
     gpu::{
@@ -11,7 +11,7 @@ use gpu_tracer::{
         gpu_ray_shader::GpuRayShader,
     },
     read_triangle_file,
-    types::{HdrColor, Mat4, Vertex},
+    types::{HdrColor, Mat4, Vec3},
     write_hdr_buffer_to_file,
 };
 
@@ -39,22 +39,20 @@ fn main() {
     let gpu = Gpu::new("My Application");
     let device_context = Rc::new(gpu.create_device(0));
     let (vertices, indices) = read_triangle_file("unity.tri");
-    let vertex_buffer = BufferResource::new_host_visible_storage(
-        device_context.clone(),
-        size_of::<Vertex>() * vertices.len(),
-    )
-    .with_data(&vertices);
-    let index_buffer = BufferResource::new_host_visible_storage(
-        device_context.clone(),
-        size_of::<u32>() * vertices.len(),
-    )
-    .with_data(&indices);
+    let vertex_buffer =
+        BufferResource::new_host_visible_with_data(device_context.clone(), &vertices);
+    let index_buffer = BufferResource::new_host_visible_with_data(device_context.clone(), &indices);
     let blas = Rc::new(Blas::new(
         device_context.clone(),
         &vertex_buffer,
         &index_buffer,
     ));
-    let gpu_instances = [Instance::new(blas.clone(), 0).with_transform(Mat4::from_scale(0.25))];
+    let gpu_instances = [
+        Instance::new(blas.clone(), 0).with_transform(Mat4::from_scale(0.25)),
+        Instance::new(blas.clone(), 1).with_transform(
+            Mat4::from_translation(Vec3::new(0.5, 0.5, 2.0)) * Mat4::from_scale(0.25),
+        ),
+    ];
 
     let debug = true;
 
@@ -64,8 +62,8 @@ fn main() {
         device_context.clone(),
         QueueFlags::COMPUTE,
     ));
-    let width = 500;
-    let height = 500;
+    let width = 1000;
+    let height = 1000;
     let frame_data = gpu.create_frame_data(device_context.clone(), width, height);
     let ray_generation_shader = load_shader("ray_gen.glsl");
     let mut gpu_ray_generator =
@@ -105,7 +103,7 @@ fn main() {
     let now = Instant::now();
     let mut command_buffer = CommandBuffer::new(queue.clone());
     command_buffer.begin();
-    for _ in 0..16 {
+    for _ in 0..2 {
         gpu_ray_generator.generate_rays(&mut command_buffer, &frame_data, Some(&progress));
 
         command_buffer.buffer_resource_barrier(

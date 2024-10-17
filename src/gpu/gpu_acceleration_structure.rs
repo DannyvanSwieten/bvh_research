@@ -45,7 +45,9 @@ impl GpuTlas {
         nodes[0].primitive_count = proxies.len() as u32;
         let mut used_nodes = 1;
         Self::update_bounds(0, &mut nodes, &mut boxes);
-        Self::subdivide(0, &mut used_nodes, &mut nodes, &mut instances, &mut boxes);
+        if nodes[0].primitive_count > 2 {
+            Self::subdivide(0, &mut used_nodes, &mut nodes, &mut instances, &mut boxes);
+        }
 
         let mut instance_buffer = BufferResource::new(
             device.clone(),

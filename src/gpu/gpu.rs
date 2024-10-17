@@ -1,7 +1,7 @@
 use std::{mem::size_of, rc::Rc};
 
 use vk_utils::{
-    buffer_resource::BufferResource, debug_utils, device_context::DeviceContext, vulkan::Vulkan,
+    buffer_resource::BufferResource, device_context::DeviceContext, vulkan::Vulkan,
     BufferUsageFlags, MemoryPropertyFlags, PhysicalDeviceFeatures2KHR,
     PhysicalDeviceVulkan12Features,
 };
@@ -17,11 +17,7 @@ pub struct Gpu {
 
 impl Gpu {
     pub fn new(application_name: &str) -> Self {
-        let vulkan = Vulkan::new(
-            application_name,
-            &[],
-            &[debug_utils::NAME.to_str().unwrap()],
-        );
+        let vulkan = Vulkan::new(application_name, &[], &[]);
 
         let physical_devices = vulkan
             .physical_devices()

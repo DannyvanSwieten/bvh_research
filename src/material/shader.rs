@@ -29,7 +29,7 @@ impl Shader for DiffuseShader {
 
     fn source(&self) -> &str {
         r#"
-        Ray diffuse(int parameter_offset, instance_id, primitive_id, ray_in) -> vec4 {
+        Ray diffuse(int parameter_offset, int instance_id, int primitive_id, Ray ray_in) -> vec4 {
             vec3 N = get_normal(instance_id, primitive_id);
             Ray ray_out;
             ray_out.origin = ray_in.origin + ray_in.direction * ray_in.t;
@@ -67,7 +67,7 @@ impl Shader for MirrorShader {
 
     fn source(&self) -> &str {
         r#"
-        Ray mirror(int parameter_offset, instance_id, primitive_id, wi, wo) -> vec4 {
+        Ray mirror(int parameter_offset, int instance_id, int primitive_id, vec wi, vec3 wo) -> vec4 {
             vec3 N = get_normal(instance_id, primitive_id);
             Ray ray_out;
             ray_out.origin = ray_in.origin + ray_in.direction * ray_in.t;
