@@ -1,6 +1,6 @@
 use std::{rc::Rc, time::Instant};
 
-use gpu_tracer::{
+use intersect::{
     gpu::{
         blas::{Blas, Instance},
         gpu::Gpu,

@@ -8,7 +8,6 @@ pub mod intersect;
 pub mod material;
 pub mod scene;
 pub mod top_level_acceleration_structure;
-pub mod trace;
 pub mod types;
 
 use std::io::BufRead;
@@ -25,8 +24,10 @@ pub fn read_triangle_file(name: &str) -> (Vec<Vertex>, Vec<u32>) {
         .to_str()
         .unwrap()
         .to_owned()
-        + "/assets/"
+        + "/intersect/assets/"
         + name;
+
+    println!("Reading file: {}", path);
     let file = std::fs::File::open(path).expect("Couldn't open file");
     let reader = std::io::BufReader::new(file);
     let positions = reader

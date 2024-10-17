@@ -1,4 +1,4 @@
-use gpu_tracer::material::{
+use intersect::material::{
     material_compiler::MaterialCompiler,
     shader::{DiffuseShader, MirrorShader},
 };

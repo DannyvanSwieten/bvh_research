@@ -1,12 +1,12 @@
 use std::{rc::Rc, time::Instant};
 
-use gpu_tracer::{
+use intersect::{
     bvh::Bvh,
     camera::Camera,
+    cpu::trace::{CpuTracer, Tracer},
     frame_buffer::Framebuffer,
     read_triangle_file,
     top_level_acceleration_structure::{Instance, TopLevelAccelerationStructure},
-    trace::{CpuTracer, Tracer},
     types::{HdrColor, Mat4, Position},
     write_framebuffer_to_file,
 };

@@ -323,17 +323,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "gpu_tracer"
-version = "0.1.0"
-dependencies = [
- "cgmath",
- "image",
- "rayon",
- "shaderc",
- "vk_utils",
-]
-
-[[package]]
 name = "half"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -413,6 +402,17 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "intersect"
+version = "0.1.0"
+dependencies = [
+ "cgmath",
+ "image",
+ "rayon",
+ "shaderc",
+ "vk_utils",
 ]
 
 [[package]]
