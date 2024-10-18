@@ -99,7 +99,7 @@ Ray shade(Ray ray, uint instance_id, uint primitive_id, float t, vec2 attributes
         vec3 e1 = v1 - v0;
         vec3 N = normalize(cross(e1, e0));
         vec3 L = vec3(1, 1, -1);
-        L = normalize(L);
+        L = normalize(L); 
         float I = max(0, dot(N, L));
         vec3 color = ray.color.xyz + vec3(1) * I;
         return Ray(vec3(0.1, .2, .5), vec3(0.6, .7, 8), vec4(color, 1.0));

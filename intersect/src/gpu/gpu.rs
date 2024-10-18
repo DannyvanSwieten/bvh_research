@@ -1,14 +1,9 @@
-use std::{mem::size_of, rc::Rc};
+use std::rc::Rc;
 
 use vk_utils::{
-    buffer_resource::BufferResource, device_context::DeviceContext, vulkan::Vulkan,
-    BufferUsageFlags, MemoryPropertyFlags, PhysicalDeviceFeatures2KHR,
+    device_context::DeviceContext, vulkan::Vulkan, PhysicalDeviceFeatures2KHR,
     PhysicalDeviceVulkan12Features,
 };
-
-use crate::types::Vec2;
-
-use super::frame_data::FrameData;
 
 pub struct Gpu {
     _vulkan: Rc<Vulkan>,
@@ -63,23 +58,5 @@ impl Gpu {
                     .enabled_features(&features2.features)
             },
         )
-    }
-
-    pub fn create_frame_data(
-        &self,
-        device_context: Rc<DeviceContext>,
-        width: usize,
-        height: usize,
-    ) -> FrameData {
-        let mut uniform_buffer = BufferResource::new(
-            device_context.clone(),
-            size_of::<Vec2>(),
-            MemoryPropertyFlags::HOST_VISIBLE,
-            BufferUsageFlags::UNIFORM_BUFFER,
-        );
-
-        uniform_buffer.upload(&[width as u32, height as u32]);
-
-        FrameData::new(width, height, uniform_buffer)
     }
 }

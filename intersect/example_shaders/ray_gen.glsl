@@ -70,7 +70,7 @@ Ray create_ray(vec2 resolution, vec2 frag_location, vec3 origin, float z){
 
 Ray generate_ray(vec2 pixel, vec2 resolution){
     // Apply a random offset to random number index to decorrelate pixels
-    uint offset = rand_seed(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y);
+    uint offset = rand_seed(uint(pixel.x), uint(pixel.y));
     
     // Add a random offset to the pixel coordinates for antialiasing
     vec2 r = vec2(halton(offset + current_sample, 0),

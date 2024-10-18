@@ -6,3 +6,5 @@ pub mod gpu_ray_accumulator;
 pub mod gpu_ray_generator;
 pub mod gpu_ray_intersector;
 pub mod gpu_ray_shader;
+pub mod ray_tracing_pipeline;
+pub mod ray_tracing_pipeline_descriptor;

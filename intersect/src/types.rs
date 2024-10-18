@@ -15,6 +15,38 @@ pub type HdrColor = Vec4;
 
 pub type Mat4 = Matrix4<f32>;
 
+pub enum DataType {
+    Float,
+    Vec2,
+    Vec3,
+    Vec4,
+    Mat4,
+}
+
+impl DataType {
+    pub fn byte_size(&self) -> usize {
+        match self {
+            DataType::Float => std::mem::size_of::<f32>(),
+            DataType::Vec2 => std::mem::size_of::<Vec2>(),
+            DataType::Vec3 => std::mem::size_of::<Vec3>(),
+            DataType::Vec4 => std::mem::size_of::<Vec4>(),
+            DataType::Mat4 => std::mem::size_of::<Mat4>(),
+        }
+    }
+}
+
+impl std::fmt::Display for DataType {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            DataType::Float => write!(f, "float"),
+            DataType::Vec2 => write!(f, "vec2"),
+            DataType::Vec3 => write!(f, "vec3"),
+            DataType::Vec4 => write!(f, "vec4"),
+            DataType::Mat4 => write!(f, "mat4"),
+        }
+    }
+}
+
 #[derive(Clone, Copy)]
 pub struct Triangle {
     pub v0: u32,

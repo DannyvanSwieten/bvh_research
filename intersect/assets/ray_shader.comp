@@ -7,17 +7,9 @@ layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
 #define FLOAT_MAX 10000
 
-struct Ray
-{
-    vec3 origin;
-    vec3 direction;
-    vec4 color;
-};
+___RAY_STRUCT___
 
-struct Intersection{
-    vec3 tuv;
-    uvec2 ip;
-};
+___INTERSECTION_STRUCT___
 
 struct Instance{
     uint64_t blas_address;
@@ -49,8 +41,8 @@ void main()
     {
         uint i = gl_GlobalInvocationID.y * frame_resolution.x + gl_GlobalInvocationID.x;
         Intersection intersection = intersections[i];
-        mat4 transform = instances[intersection.ip.x].transform;
-        rays[i] = shade(rays[i], intersection.ip.x, intersection.ip.y, intersection.tuv.x, intersection.tuv.yz, transform);
+        mat4 transform = instances[intersection.instance_id].transform;
+        rays[i] = shade(rays[i], intersection.instance_id, intersection.primitive_id, intersection.t, vec2(intersection.u, intersection.v), transform);
     }
 }
 

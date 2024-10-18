@@ -1,8 +1,8 @@
-use std::{collections::HashMap, path::Path, rc::Rc};
+use std::{path::Path, rc::Rc};
 
 use vk_utils::{
     buffer_resource::BufferResource, command_buffer::CommandBuffer, device_context::DeviceContext,
-    pipeline_descriptor::ComputePipeline, DescriptorSetLayoutBinding,
+    pipeline_descriptor::ComputePipeline,
 };
 
 use super::{frame_data::FrameData, gpu_acceleration_structure::GpuTlas};
@@ -15,8 +15,9 @@ impl GpuRayShader {
     pub fn new(
         device: Rc<DeviceContext>,
         path: &Path,
+        ray_struct: &str,
+        intersection_struct: &str,
         max_frames_in_flight: u32,
-        descriptors: Option<HashMap<u32, Vec<DescriptorSetLayoutBinding>>>,
     ) -> Self {
         let template_path = std::env::current_dir()
             .unwrap()
@@ -25,14 +26,19 @@ impl GpuRayShader {
         let ray_gen_src = std::fs::read_to_string(path).expect("Couldn't load Ray generator file");
         let template_src = std::fs::read_to_string(template_path)
             .expect("Couldn't load Ray generator template file");
+        let template_src = template_src.replace("___INTERSECTION_STRUCT___", intersection_struct);
+        let template_src = template_src.replace("___RAY_STRUCT___", ray_struct);
         let src = template_src + &ray_gen_src;
+
+        #[cfg(debug_assertions)]
+        println!("Ray Shader: {}", src);
 
         let pipeline = ComputePipeline::new_from_source_string(
             device.clone(),
             max_frames_in_flight,
             &src,
             "main",
-            descriptors,
+            None,
         )
         .unwrap();
 
@@ -42,8 +48,9 @@ impl GpuRayShader {
     pub fn new_from_string(
         device: Rc<DeviceContext>,
         src: &str,
+        ray_struct: &str,
+        intersection_struct: &str,
         max_frames_in_flight: u32,
-        descriptors: Option<HashMap<u32, Vec<DescriptorSetLayoutBinding>>>,
     ) -> Self {
         let template_path = std::env::current_dir()
             .unwrap()
@@ -52,6 +59,9 @@ impl GpuRayShader {
         let template_src = std::fs::read_to_string(template_path)
             .expect("Couldn't load Ray generator template file");
 
+        let template_src = template_src.replace("___INTERSECTION_STRUCT___", intersection_struct);
+        let template_src = template_src.replace("___RAY_STRUCT___", ray_struct);
+
         let src = template_src + src;
 
         let pipeline = ComputePipeline::new_from_source_string(
@@ -59,7 +69,7 @@ impl GpuRayShader {
             max_frames_in_flight,
             &src,
             "main",
-            descriptors,
+            None,
         )
         .unwrap();
 

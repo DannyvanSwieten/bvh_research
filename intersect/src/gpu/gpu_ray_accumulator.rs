@@ -30,7 +30,7 @@ impl GpuRayAccumulator {
     }
 
     pub fn accumulate(&mut self, frame_data: &FrameData, command_buffer: &mut CommandBuffer) {
-        let (x, y, z) = self.pipeline.workgroup_size();
+        let (x, y, _z) = self.pipeline.workgroup_size();
         command_buffer.bind_compute_pipeline(&self.pipeline);
         command_buffer.dispatch_compute(
             frame_data.width as u32 / x,

@@ -1,9 +1,8 @@
-use std::{collections::HashMap, mem::size_of, path::Path, rc::Rc};
+use std::{mem::size_of, path::Path, rc::Rc};
 
 use vk_utils::{
     buffer_resource::BufferResource, command_buffer::CommandBuffer, device_context::DeviceContext,
-    pipeline_descriptor::ComputePipeline, BufferUsageFlags, DescriptorSetLayoutBinding,
-    MemoryPropertyFlags,
+    pipeline_descriptor::ComputePipeline, BufferUsageFlags, MemoryPropertyFlags,
 };
 
 use crate::types::Ray;
@@ -19,8 +18,8 @@ impl GpuRayGenerator {
     pub fn new(
         device: Rc<DeviceContext>,
         path: &Path,
+        ray_struct: &str,
         max_frames_in_flight: u32,
-        descriptors: Option<HashMap<u32, Vec<DescriptorSetLayoutBinding>>>,
     ) -> Self {
         let template_path = std::env::current_dir()
             .unwrap()
@@ -29,6 +28,7 @@ impl GpuRayGenerator {
         let ray_gen_src = std::fs::read_to_string(path).expect("Couldn't load Ray generator file");
         let template_src = std::fs::read_to_string(template_path)
             .expect("Couldn't load Ray generator template file");
+        let template_src = template_src.replace("___RAY_STRUCT___", ray_struct);
         let src = template_src + &ray_gen_src;
 
         let pipeline = ComputePipeline::new_from_source_string(
@@ -36,7 +36,7 @@ impl GpuRayGenerator {
             max_frames_in_flight,
             &src,
             "main",
-            descriptors,
+            None,
         )
         .unwrap();
 
@@ -46,8 +46,8 @@ impl GpuRayGenerator {
     pub fn new_from_string(
         device: Rc<DeviceContext>,
         src: &str,
+        ray_struct: &str,
         max_frames_in_flight: u32,
-        descriptors: Option<HashMap<u32, Vec<DescriptorSetLayoutBinding>>>,
     ) -> Self {
         let template_path = std::env::current_dir()
             .unwrap()
@@ -56,14 +56,19 @@ impl GpuRayGenerator {
         let template_src = std::fs::read_to_string(template_path)
             .expect("Couldn't load Ray generator template file");
 
+        let template_src = template_src.replace("___RAY_STRUCT___", ray_struct);
+
         let src = template_src + src;
+
+        #[cfg(debug_assertions)]
+        println!("Ray Generator: {}", src);
 
         let pipeline = ComputePipeline::new_from_source_string(
             device.clone(),
             max_frames_in_flight,
             &src,
             "main",
-            descriptors,
+            None,
         )
         .unwrap();
 

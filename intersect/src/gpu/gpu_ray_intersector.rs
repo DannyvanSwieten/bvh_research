@@ -6,25 +6,57 @@ use vk_utils::{
 
 use super::{frame_data::FrameData, gpu_acceleration_structure::GpuTlas};
 
+pub struct IntersectionFunction {
+    pub name: String,
+    pub code: String,
+}
+
+impl IntersectionFunction {
+    pub fn new(name: &str, code: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            code: code.to_string(),
+        }
+    }
+}
+
 pub struct GpuIntersector {
     device: Rc<DeviceContext>,
     pipeline: ComputePipeline,
 }
 
 impl GpuIntersector {
-    pub fn new(device: Rc<DeviceContext>, _max_frames_in_flight: usize) -> Self {
+    pub fn new(
+        device: Rc<DeviceContext>,
+        ray_struct: &str,
+        intersection_struct: &str,
+        intersection_table: &[IntersectionFunction],
+        _max_frames_in_flight: usize,
+    ) -> Self {
         let shader_path = std::env::current_dir()
             .unwrap()
             .join("./intersect/assets/ray_intersector.comp");
 
-        let pipeline = ComputePipeline::new_from_source_file(
-            shader_path.as_path(),
-            device.clone(),
-            1,
-            "main",
-            None,
-        )
-        .unwrap();
+        // load the file as string
+        let shader = std::fs::read_to_string(shader_path.as_path()).unwrap();
+        let intersection_code = intersection_table
+            .iter()
+            .fold(String::new(), |acc, x| acc + &x.name + "\n");
+
+        let intersection_code = intersection_table
+            .iter()
+            .fold(intersection_code, |acc, x| acc + &x.code + "\n");
+
+        let shader = shader.replace("___CUSTOM_INTERSECTION_FUNCTIONS___", &intersection_code);
+        let shader = shader.replace("___RAY_STRUCT___", ray_struct);
+        let shader = shader.replace("___INTERSECTION_STRUCT___", intersection_struct);
+
+        #[cfg(debug_assertions)]
+        println!("Ray Intersector: {}", shader);
+
+        let pipeline =
+            ComputePipeline::new_from_source_string(device.clone(), 1, &shader, "main", None)
+                .unwrap();
 
         Self { pipeline, device }
     }
