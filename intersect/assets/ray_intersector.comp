@@ -16,6 +16,10 @@ struct Node{
     float max_z;
     uint first_primitive;
     uint primitive_count;
+    uint intersection_function_offset;
+    uint pad0;
+    uint pad1;
+    uint pad2;
 };
 
 struct Instance{
@@ -149,9 +153,10 @@ float traverse_top_level(Ray ray, inout float u, inout float v, inout uint insta
     float d = FLOAT_MAX;
     vec3 invDirection = 1.0 / ray.direction;
     while(true) {
-        if (tlas[node_idx].primitive_count > 0) {
-            uint first = tlas[node_idx].first_primitive;
-            uint last = first + tlas[node_idx].primitive_count;
+        Node node = tlas[node_idx];
+        if (node.primitive_count > 0) {
+            uint first = node.first_primitive;
+            uint last = first + node.primitive_count;
             for (uint p = first; p < last; ++p) {
                 float lu, lv;
                 uint li = -1;

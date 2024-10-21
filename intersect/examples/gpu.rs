@@ -2,24 +2,23 @@ use std::{rc::Rc, time::Instant};
 
 use intersect::{
     gpu::{
-        blas::{Blas, Instance},
+        blas::Geometry,
         gpu::Gpu,
         gpu_acceleration_structure::GpuTlas,
+        instance::Instance,
         ray_tracing_pipeline::RayTracingPipeline,
         ray_tracing_pipeline_descriptor::{
             PayloadDescriptor, RayTracingPipelineDescriptor, ShaderSource,
         },
+        triangle_blas::TriangleGeometry,
     },
     read_triangle_file,
     types::{DataType, HdrColor, Mat4, Ray, Vec3},
     write_hdr_buffer_to_file, write_ray_buffer_to_file,
 };
 use vk_utils::{
-    buffer_resource::BufferResource,
-    command_buffer::CommandBuffer,
-    image2d_resource::Image2DResource,
-    queue::{self, CommandQueue},
-    BufferUsageFlags, Format, ImageUsageFlags, MemoryPropertyFlags, QueueFlags,
+    buffer_resource::BufferResource, command_buffer::CommandBuffer,
+    image2d_resource::Image2DResource, queue::CommandQueue, QueueFlags,
 };
 
 fn load_shader(name: &str) -> String {
@@ -45,7 +44,7 @@ fn main() {
     let vertex_buffer =
         BufferResource::new_host_visible_with_data(device_context.clone(), &vertices);
     let index_buffer = BufferResource::new_host_visible_with_data(device_context.clone(), &indices);
-    let blas = Rc::new(Blas::new(
+    let blas = Rc::new(Geometry::new_triangles(
         device_context.clone(),
         &vertex_buffer,
         &index_buffer,

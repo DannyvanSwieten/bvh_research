@@ -2,3 +2,5 @@
 members = [
     "intersect",
 ]
+
+resolver = "2"

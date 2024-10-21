@@ -10,7 +10,7 @@ use crate::{
     types::{Mat4, AABB},
 };
 
-use super::blas::Instance;
+use super::{blas::Geometry, instance::Instance};
 
 pub struct GpuTlas {
     pub tlas_buffer: BufferResource,
@@ -29,14 +29,23 @@ impl GpuTlas {
         let mut nodes = Vec::new();
         let mut boxes = Vec::new();
         for instance in proxies {
-            nodes.push(Node::default());
-            boxes.push(instance.blas().aabb().transformed(instance.transform()))
+            match instance.blas() {
+                Geometry::Triangle(_) => {
+                    nodes.push(Node::default());
+                }
+                Geometry::Procedural(procedural) => {
+                    nodes.push(Node::default().with_intersection_function_offset(
+                        procedural.intersection_function_offset(),
+                    ));
+                }
+            }
+            boxes.push(instance.aabb().transformed(instance.transform()))
         }
 
         let mut instances: Vec<GpuInstance> = proxies
             .iter()
             .map(|proxy| GpuInstance {
-                blas: proxy.blas().address(),
+                blas: proxy.address(),
                 instance_id: proxy.id(),
                 transform: *proxy.transform(),
             })
@@ -51,7 +60,7 @@ impl GpuTlas {
 
         let mut instance_buffer = BufferResource::new(
             device.clone(),
-            std::mem::size_of_val(proxies),
+            std::mem::size_of_val(&instances),
             MemoryPropertyFlags::HOST_VISIBLE,
             BufferUsageFlags::STORAGE_BUFFER,
         );
@@ -59,7 +68,7 @@ impl GpuTlas {
 
         let mut tlas_buffer = BufferResource::new(
             device,
-            size_of::<Node>() * nodes.len(),
+            std::mem::size_of_val(&nodes),
             MemoryPropertyFlags::HOST_VISIBLE,
             BufferUsageFlags::STORAGE_BUFFER,
         );

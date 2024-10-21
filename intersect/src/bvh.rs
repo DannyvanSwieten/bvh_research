@@ -9,6 +9,15 @@ pub struct Node {
     pub aabb: AABB,
     pub first_primitive: u32,
     pub primitive_count: u32,
+    pub intersection_function_offset: u32,
+    pub padding: [u32; 3],
+}
+
+impl Node {
+    pub fn with_intersection_function_offset(mut self, offset: u32) -> Self {
+        self.intersection_function_offset = offset;
+        self
+    }
 }
 
 impl Default for Node {
@@ -20,6 +29,8 @@ impl Default for Node {
                 min: Vec3::new(f32::MAX, f32::MAX, f32::MAX),
                 max: Vec3::new(f32::MIN, f32::MIN, f32::MIN),
             },
+            intersection_function_offset: 0,
+            padding: [0; 3],
         }
     }
 }
