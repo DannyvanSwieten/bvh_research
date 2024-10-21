@@ -21,6 +21,7 @@ pub struct GpuTlas {
 struct GpuInstance {
     blas: u64,
     instance_id: u32,
+    flags: u32,
     transform: Mat4,
 }
 
@@ -47,6 +48,11 @@ impl GpuTlas {
             .map(|proxy| GpuInstance {
                 blas: proxy.address(),
                 instance_id: proxy.id(),
+                flags: if let Geometry::Procedural(p) = proxy.blas() {
+                    p.intersection_function_offset()
+                } else {
+                    0
+                },
                 transform: *proxy.transform(),
             })
             .collect();

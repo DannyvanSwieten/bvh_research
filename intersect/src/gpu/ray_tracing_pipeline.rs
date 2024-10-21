@@ -185,6 +185,20 @@ impl RayTracingPipeline {
             AccessFlags::MEMORY_READ,
         );
         self.ray_intersector.intersect(command_buffer, frame_data);
+        command_buffer.buffer_resource_barrier(
+            &frame_data.intersection_buffer,
+            PipelineStageFlags::COMPUTE_SHADER,
+            PipelineStageFlags::COMPUTE_SHADER,
+            AccessFlags::MEMORY_WRITE,
+            AccessFlags::MEMORY_READ,
+        );
         self.ray_shader.shade_rays(command_buffer, frame_data);
+        command_buffer.buffer_resource_barrier(
+            &frame_data.ray_buffer,
+            PipelineStageFlags::COMPUTE_SHADER,
+            PipelineStageFlags::COMPUTE_SHADER,
+            AccessFlags::MEMORY_READ,
+            AccessFlags::MEMORY_WRITE,
+        );
     }
 }

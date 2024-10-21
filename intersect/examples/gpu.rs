@@ -10,10 +10,9 @@ use intersect::{
         ray_tracing_pipeline_descriptor::{
             PayloadDescriptor, RayTracingPipelineDescriptor, ShaderSource,
         },
-        triangle_blas::TriangleGeometry,
     },
     read_triangle_file,
-    types::{DataType, HdrColor, Mat4, Ray, Vec3},
+    types::{DataType, HdrColor, Mat4, Ray, Vec3, AABB},
     write_hdr_buffer_to_file, write_ray_buffer_to_file,
 };
 use vk_utils::{
@@ -44,6 +43,10 @@ fn main() {
     let vertex_buffer =
         BufferResource::new_host_visible_with_data(device_context.clone(), &vertices);
     let index_buffer = BufferResource::new_host_visible_with_data(device_context.clone(), &indices);
+    let procedural_blas = Rc::new(Geometry::new_procedural(
+        AABB::new(Vec3::new(-1.0, -1.0, -1.0), Vec3::new(1.0, 1.0, 1.0)),
+        1,
+    ));
     let blas = Rc::new(Geometry::new_triangles(
         device_context.clone(),
         &vertex_buffer,
@@ -51,9 +54,7 @@ fn main() {
     ));
     let gpu_instances = [
         Instance::new(blas.clone(), 0).with_transform(Mat4::from_scale(0.25)),
-        Instance::new(blas.clone(), 1).with_transform(
-            Mat4::from_translation(Vec3::new(0.5, 0.5, 2.0)) * Mat4::from_scale(0.25),
-        ),
+        Instance::new(procedural_blas.clone(), 1),
     ];
 
     let acceleration_structure = GpuTlas::new(device_context.clone(), &gpu_instances);
@@ -70,8 +71,8 @@ fn main() {
     pipeline.set_shader_buffer(1, 0, &index_buffer);
     pipeline.set_shader_buffer(1, 1, &vertex_buffer);
 
-    let width = 1000;
-    let height = 1000;
+    let width = 512;
+    let height = 512;
 
     let queue = Rc::new(CommandQueue::new(
         device_context.clone(),

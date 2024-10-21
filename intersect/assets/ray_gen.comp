@@ -18,10 +18,10 @@ Ray generate_ray(vec2 pixel, vec2 resolution);
 
 void main()
 {
-    if(gl_GlobalInvocationID.x < FrameSettingsBuffer.resolution.x && gl_GlobalInvocationID.y < FrameSettingsBuffer.resolution.y)
-    {
+    // if(gl_GlobalInvocationID.x < FrameSettingsBuffer.resolution.x && gl_GlobalInvocationID.y < FrameSettingsBuffer.resolution.y)
+    // {
         uint i = gl_GlobalInvocationID.y * FrameSettingsBuffer.resolution.x + gl_GlobalInvocationID.x;
         RayBuffer.rays[i] = generate_ray(gl_GlobalInvocationID.xy, FrameSettingsBuffer.resolution);
-    }
+    // }
 }
 
