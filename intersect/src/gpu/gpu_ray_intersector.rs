@@ -51,6 +51,21 @@ impl GpuIntersector {
         let shader = shader.replace("___RAY_STRUCT___", ray_struct);
         let shader = shader.replace("___INTERSECTION_STRUCT___", intersection_struct);
 
+        let shader = if !intersection_table.is_empty() {
+            let cases = "match(instance_flags) {\n".to_string()
+                + &intersection_table
+                    .iter()
+                    .enumerate()
+                    .fold(String::new(), |acc, (i, x)| {
+                        acc + &format!("{} => return {}(ray);\n", i, x.name)
+                    })
+                + "_ => break,\n}";
+
+            shader.replace("___INTERSECTION_CASES___", &cases)
+        } else {
+            shader.replace("___INTERSECTION_CASES___", "")
+        };
+
         #[cfg(debug_assertions)]
         println!("Ray Intersector: {}", shader);
 
