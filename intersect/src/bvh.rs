@@ -11,15 +11,6 @@ pub struct Node {
     pub primitive_count: u32,
 }
 
-impl Node {
-    pub fn with_intersection_function_offset(mut self, offset: u32) -> Self {
-        // last 4 bits to store the offset
-        let mask = 0b0000;
-        self.primitive_count |= offset;
-        self
-    }
-}
-
 impl Default for Node {
     fn default() -> Self {
         Node {

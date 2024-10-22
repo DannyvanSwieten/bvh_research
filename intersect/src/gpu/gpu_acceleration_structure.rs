@@ -1,4 +1,4 @@
-use std::{mem::size_of, rc::Rc};
+use std::rc::Rc;
 
 use vk_utils::{
     buffer_resource::BufferResource, device_context::DeviceContext, BufferUsageFlags,
@@ -30,16 +30,7 @@ impl GpuTlas {
         let mut nodes = Vec::new();
         let mut boxes = Vec::new();
         for instance in proxies {
-            match instance.blas() {
-                Geometry::Triangle(_) => {
-                    nodes.push(Node::default());
-                }
-                Geometry::Procedural(procedural) => {
-                    nodes.push(Node::default().with_intersection_function_offset(
-                        procedural.intersection_function_offset(),
-                    ));
-                }
-            }
+            nodes.push(Node::default());
             boxes.push(instance.aabb().transformed(instance.transform()))
         }
 

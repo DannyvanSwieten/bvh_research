@@ -46,6 +46,7 @@ pub struct RayTracingPipelineDescriptor {
     pub ray_generation_source: ShaderSource,
     pub ray_shader_source: ShaderSource,
     pub max_frames_in_flight: u32,
+    pub intersection_functions: Vec<ShaderSource>,
 }
 
 impl RayTracingPipelineDescriptor {
@@ -56,6 +57,7 @@ impl RayTracingPipelineDescriptor {
             ray_generation_source,
             ray_shader_source,
             max_frames_in_flight: 1,
+            intersection_functions: Vec::new(),
         }
     }
 
@@ -74,11 +76,25 @@ impl RayTracingPipelineDescriptor {
         self
     }
 
+    pub fn with_intersection_function(mut self, source: ShaderSource) -> Self {
+        self.intersection_functions.push(source);
+        self
+    }
+
+    pub fn with_intersection_functions(mut self, sources: Vec<ShaderSource>) -> Self {
+        self.intersection_functions.extend(sources);
+        self
+    }
+
     pub fn ray_payload_descriptor(&self) -> &PayloadDescriptor {
         &self.ray_payload_descriptor
     }
 
     pub fn intersection_payload_descriptor(&self) -> &PayloadDescriptor {
         &self.intersection_payload_descriptor
+    }
+
+    pub fn intersection_functions(&self) -> &[ShaderSource] {
+        &self.intersection_functions
     }
 }

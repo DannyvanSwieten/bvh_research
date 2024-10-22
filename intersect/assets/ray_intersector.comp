@@ -243,7 +243,6 @@ float traverse_bttm_level(Ray ray, uint instance_id, inout float u, inout float 
         primitive_id = 0;
         // TODO: Implement custom intersection functions
         return intersect_sphere(ray, vec3(0, 1, 0), 1.0, u, v);
-
     }
     BlasRef blas_ref = BlasRef(instance.blas_address);
 
