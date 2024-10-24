@@ -60,7 +60,7 @@ fn main() {
     let acceleration_structure = GpuTlas::new(device_context.clone(), &gpu_instances);
 
     let ray_generator_source = ShaderSource::String(load_shader("ray_gen.glsl"));
-    let ray_shader_source = ShaderSource::String(load_shader("ray_shader.glsl"));
+    let ray_shader_source = ShaderSource::String(load_shader("closest_hit.glsl"));
 
     let ray_descriptor = PayloadDescriptor::new().with_attribute("color", DataType::Vec4);
 
@@ -68,8 +68,8 @@ fn main() {
         RayTracingPipelineDescriptor::new(ray_generator_source, ray_shader_source)
             .with_ray_payload_descriptor(ray_descriptor);
     let mut pipeline = RayTracingPipeline::new(device_context.clone(), &pipeline_descriptor);
-    pipeline.set_shader_buffer(1, 0, &index_buffer);
-    pipeline.set_shader_buffer(1, 1, &vertex_buffer);
+    // pipeline.set_shader_buffer(1, 0, &index_buffer);
+    // pipeline.set_shader_buffer(1, 1, &vertex_buffer);
 
     let width = 512;
     let height = 512;
@@ -80,25 +80,27 @@ fn main() {
     ));
     let mut command_buffer = CommandBuffer::new(queue.clone());
 
-    let frame_data = pipeline.prepare_to_render(width, height);
+    // let frame_data = pipeline.prepare_to_render(width, height);
     let progress = Progress {
         frame: 0,
         bounce: 0,
     };
     command_buffer.begin();
     pipeline.trace(
-        &frame_data,
+        width,
+        height,
         &acceleration_structure,
+        
         Some(&progress),
         &mut command_buffer,
     );
     command_buffer.submit();
 
-    let ray_buffer_data: Vec<Ray> = frame_data.ray_buffer.copy_data();
-    write_ray_buffer_to_file(
-        "ray_buffer.png",
-        &ray_buffer_data,
-        width as usize,
-        height as usize,
-    );
+    // let ray_buffer_data: Vec<Ray> = frame_data.ray_buffer.copy_data();
+    // write_ray_buffer_to_file(
+    //     "ray_buffer.png",
+    //     &ray_buffer_data,
+    //     width as usize,
+    //     height as usize,
+    // );
 }

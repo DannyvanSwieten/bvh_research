@@ -13,8 +13,8 @@ use crate::{
 use super::{blas::Geometry, instance::Instance};
 
 pub struct GpuTlas {
-    pub tlas_buffer: BufferResource,
-    pub instance_buffer: BufferResource,
+    tlas_buffer: BufferResource,
+    instance_buffer: BufferResource,
 }
 
 #[repr(C)]
@@ -134,5 +134,13 @@ impl GpuTlas {
         Self::update_bounds(right_child_index, nodes, boxes);
         Self::subdivide(left_child_index, used_nodes, nodes, instances, boxes);
         Self::subdivide(right_child_index, used_nodes, nodes, instances, boxes);
+    }
+
+    pub fn buffer(&self) -> &BufferResource {
+        &self.tlas_buffer
+    }
+
+    pub fn instance_buffer(&self) -> &BufferResource {
+        &self.instance_buffer
     }
 }

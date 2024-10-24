@@ -95,9 +95,9 @@ impl GpuIntersector {
         acceleration_structure: &GpuTlas,
     ) {
         self.pipeline
-            .set_storage_buffer(0, 0, &acceleration_structure.tlas_buffer);
+            .set_storage_buffer(0, 0, &acceleration_structure.buffer());
         self.pipeline
-            .set_storage_buffer(0, 1, &acceleration_structure.instance_buffer);
+            .set_storage_buffer(0, 1, &acceleration_structure.buffer());
         self.pipeline.set_storage_buffer(0, 2, ray_buffer);
         self.pipeline
             .set_storage_buffer(0, 3, intersection_result_buffer);

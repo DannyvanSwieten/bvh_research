@@ -97,7 +97,7 @@ impl GpuRayShader {
         self.pipeline.set_storage_buffer(0, 0, ray_buffer);
         self.pipeline.set_storage_buffer(0, 1, intersection_buffer);
         self.pipeline
-            .set_storage_buffer(0, 2, &acceleration_structure.instance_buffer);
+            .set_storage_buffer(0, 2, &acceleration_structure.buffer());
     }
 
     pub fn set_user_buffer(&mut self, set: usize, binding: usize, buffer: &BufferResource) {
