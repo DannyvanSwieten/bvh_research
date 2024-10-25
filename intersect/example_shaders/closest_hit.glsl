@@ -11,5 +11,5 @@ void closest_hit_shader(Intersection intersection, Ray ray, mat4 transform, inou
         vec3 e0 = v2 - v0;
         vec3 e1 = v1 - v0;
         vec3 N = normalize(cross(e1, e0));
-        payload.color = vec3(1.0);//0.5 * N + 0.5;
+        payload.color = 0.5 * N + 0.5;
 }

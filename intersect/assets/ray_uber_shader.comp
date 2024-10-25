@@ -11,7 +11,9 @@
 
 ___ANY_HIT_SHADER_DEFINE___
 
-layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+#define THREAD_GROUP_SIZE 16
+
+layout (local_size_x = THREAD_GROUP_SIZE, local_size_y = THREAD_GROUP_SIZE, local_size_z = 1) in;
 
 struct Ray
 {

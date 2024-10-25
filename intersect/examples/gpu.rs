@@ -134,6 +134,7 @@ fn main() {
         frame: 0,
         bounce: 0,
     };
+    let now = Instant::now();
     command_buffer.begin();
     pipeline.trace(
         width,
@@ -143,6 +144,7 @@ fn main() {
         &mut command_buffer,
     );
     command_buffer.submit();
+    println!("Elapsed: {:?} milliseconds", now.elapsed().as_millis());
 
     let mut transfer_buffer = BufferResource::new_host_visible_storage(
         device_context.clone(),

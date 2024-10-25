@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use vk_utils::{
-    device_context::DeviceContext, vulkan::Vulkan, PhysicalDeviceFeatures2KHR,
+    debug_utils, device_context::DeviceContext, vulkan::Vulkan, PhysicalDeviceFeatures2KHR,
     PhysicalDeviceVulkan12Features,
 };
 
@@ -12,7 +12,8 @@ pub struct Gpu {
 
 impl Gpu {
     pub fn new(application_name: &str) -> Self {
-        let vulkan = Vulkan::new(application_name, &[], &[]);
+        let deb = debug_utils::NAME.to_str().unwrap();
+        let vulkan = Vulkan::new(application_name, &["VK_LAYER_KHRONOS_validation"], &[deb]);
 
         let physical_devices = vulkan
             .physical_devices()
