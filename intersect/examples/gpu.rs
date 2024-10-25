@@ -13,12 +13,12 @@ use intersect::{
         },
     },
     read_triangle_file,
-    types::{DataType, HdrColor, Mat4, Ray, Vec3, AABB},
-    write_hdr_buffer_to_file, write_ray_buffer_to_file,
+    types::{DataType, HdrColor, Mat4, Vec3, AABB},
+    write_hdr_buffer_to_file,
 };
 use vk_utils::{
     buffer_resource::BufferResource, command_buffer::CommandBuffer,
-    image2d_resource::Image2DResource, queue::CommandQueue, Format, QueueFlags,
+    image2d_resource::Image2DResource, queue::CommandQueue, Format, ImageLayout, QueueFlags,
 };
 
 fn load_shader(name: &str) -> String {
@@ -94,7 +94,7 @@ fn main() {
                     .with_attribute(
                         "vertices",
                         StructAttribute {
-                            data_type: DataType::Vec3,
+                            data_type: DataType::Float,
                             is_array: true,
                             ..Default::default()
                         },
@@ -108,25 +108,26 @@ fn main() {
                     .with_read_only(false),
             );
     let mut pipeline = RayTracingPipeline::new(device_context.clone(), &pipeline_descriptor);
-    pipeline.set_storage_buffer(0, &index_buffer);
-    pipeline.set_storage_buffer(1, &vertex_buffer);
 
     let width = 512;
     let height = 512;
 
-    let image = Image2DResource::new_device_local_storage_image(
+    let mut image = Image2DResource::new_device_local_storage_image(
         device_context.clone(),
         width,
         height,
         Format::R32G32B32A32_SFLOAT,
     );
 
-    pipeline.set_storage_image(0, &image);
-
     let queue = Rc::new(CommandQueue::new(
         device_context.clone(),
         QueueFlags::COMPUTE,
     ));
+    let mut transition_command_buffer = CommandBuffer::new(queue.clone());
+    transition_command_buffer.begin();
+    transition_command_buffer.image_resource_transition(&mut image, ImageLayout::GENERAL);
+    transition_command_buffer.submit();
+
     let mut command_buffer = CommandBuffer::new(queue.clone());
 
     // let frame_data = pipeline.prepare_to_render(width, height);
@@ -135,7 +136,11 @@ fn main() {
         bounce: 0,
     };
     let now = Instant::now();
+    pipeline.set_storage_image(0, &image);
+    pipeline.set_storage_buffer(0, &index_buffer);
+    pipeline.set_storage_buffer(1, &vertex_buffer);
     command_buffer.begin();
+    command_buffer.image_resource_transition(&mut image, ImageLayout::GENERAL);
     pipeline.trace(
         width,
         height,

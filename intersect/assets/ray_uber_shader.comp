@@ -47,10 +47,6 @@ struct Intersection{
     uint primitive_id;
 };
 
-layout(scalar, set = 0, binding = 2) readonly uniform FrameSettingsName {
-    ivec2 resolution;
-}FrameSettingsBuffer;
-
 layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer BlasRef{
     uint64_t vertex_buffer;
     uint64_t index_buffer;

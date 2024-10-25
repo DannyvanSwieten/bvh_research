@@ -1,8 +1,3 @@
-layout(push_constant) uniform FrameData {
-    uint current_sample;
-    uint current_bounce;
-};
-
 #define M_PI_F 3.14159
 
 const uint primes[] = {
@@ -72,8 +67,8 @@ void ray_generation_shader(uvec2 pixel, ivec2 resolution, inout RayPayload paylo
     uint offset = rand_seed(uint(pixel.x), uint(pixel.y));
     
     // Add a random offset to the pixel coordinates for antialiasing
-    vec2 r = vec2(halton(offset + current_sample, 0),
-                        halton(offset + current_sample, 1));
+    vec2 r = vec2(halton(offset, 0),
+                        halton(offset, 1));
 
     payload.color = vec3(1.0);
     
