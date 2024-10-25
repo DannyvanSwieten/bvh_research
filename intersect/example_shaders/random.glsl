@@ -68,3 +68,18 @@ vec2 rand_disk(inout uint seed)
 		}
 	}
 }
+
+// Uses the inversion method to map two uniformly random numbers to a three dimensional
+// unit hemisphere where the probability of a given sample is proportional to the cosine
+// of the angle between the sample direction and the "up" direction (0, 1, 0)
+vec3 sampleCosineWeightedHemisphere(vec2 u) {
+    float phi = 2.0f * M_PI_F * u.x;
+    
+    float cos_phi = cos(phi);
+    float sin_phi = sin(phi);
+    
+    float cos_theta = sqrt(u.y);
+    float sin_theta = sqrt(1.0 - cos_theta * cos_theta);
+    
+    return vec3(sin_theta * cos_phi, cos_theta, sin_theta * sin_phi);
+}

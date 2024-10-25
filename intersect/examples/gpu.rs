@@ -8,7 +8,8 @@ use intersect::{
         instance::Instance,
         ray_tracing_pipeline::RayTracingPipeline,
         ray_tracing_pipeline_descriptor::{
-            PayloadDescriptor, RayTracingPipelineDescriptor, ShaderSource,
+            BufferDescriptor, ImageDescriptor, PayloadDescriptor, RayTracingPipelineDescriptor,
+            ShaderFunction, ShaderSource, StructAttribute,
         },
     },
     read_triangle_file,
@@ -17,7 +18,7 @@ use intersect::{
 };
 use vk_utils::{
     buffer_resource::BufferResource, command_buffer::CommandBuffer,
-    image2d_resource::Image2DResource, queue::CommandQueue, QueueFlags,
+    image2d_resource::Image2DResource, queue::CommandQueue, Format, QueueFlags,
 };
 
 fn load_shader(name: &str) -> String {
@@ -54,25 +55,73 @@ fn main() {
     ));
     let gpu_instances = [
         Instance::new(blas.clone(), 0).with_transform(Mat4::from_scale(0.25)),
-        Instance::new(procedural_blas.clone(), 1),
+        // Instance::new(procedural_blas.clone(), 1),
     ];
 
     let acceleration_structure = GpuTlas::new(device_context.clone(), &gpu_instances);
 
     let ray_generator_source = ShaderSource::String(load_shader("ray_gen.glsl"));
     let ray_shader_source = ShaderSource::String(load_shader("closest_hit.glsl"));
-
-    let ray_descriptor = PayloadDescriptor::new().with_attribute("color", DataType::Vec4);
+    let ray_miss_source = ShaderFunction::new(
+        ShaderSource::String(load_shader("miss.glsl")),
+        "first_miss_shader",
+    );
 
     let pipeline_descriptor =
         RayTracingPipelineDescriptor::new(ray_generator_source, ray_shader_source)
-            .with_ray_payload_descriptor(ray_descriptor);
+            .with_miss_function(ray_miss_source)
+            .with_ray_payload_descriptor(PayloadDescriptor::new().with_attribute(
+                "color",
+                StructAttribute {
+                    data_type: DataType::Vec3,
+                    ..Default::default()
+                },
+            ))
+            .with_buffer_descriptor(
+                BufferDescriptor::new("IndexBuffer")
+                    .with_attribute(
+                        "indices",
+                        StructAttribute {
+                            data_type: DataType::Uint32,
+                            is_array: true,
+                            ..Default::default()
+                        },
+                    )
+                    .with_read_only(true),
+            )
+            .with_buffer_descriptor(
+                BufferDescriptor::new("VertexBuffer")
+                    .with_attribute(
+                        "vertices",
+                        StructAttribute {
+                            data_type: DataType::Vec3,
+                            is_array: true,
+                            ..Default::default()
+                        },
+                    )
+                    .with_read_only(true),
+            )
+            .with_image_descriptor(
+                ImageDescriptor::new("result")
+                    .with_float(true)
+                    .with_bits_per_channel(32)
+                    .with_read_only(false),
+            );
     let mut pipeline = RayTracingPipeline::new(device_context.clone(), &pipeline_descriptor);
-    // pipeline.set_shader_buffer(1, 0, &index_buffer);
-    // pipeline.set_shader_buffer(1, 1, &vertex_buffer);
+    pipeline.set_storage_buffer(0, &index_buffer);
+    pipeline.set_storage_buffer(1, &vertex_buffer);
 
     let width = 512;
     let height = 512;
+
+    let image = Image2DResource::new_device_local_storage_image(
+        device_context.clone(),
+        width,
+        height,
+        Format::R32G32B32A32_SFLOAT,
+    );
+
+    pipeline.set_storage_image(0, &image);
 
     let queue = Rc::new(CommandQueue::new(
         device_context.clone(),
@@ -90,11 +139,28 @@ fn main() {
         width,
         height,
         &acceleration_structure,
-        
         Some(&progress),
         &mut command_buffer,
     );
     command_buffer.submit();
+
+    let mut transfer_buffer = BufferResource::new_host_visible_storage(
+        device_context.clone(),
+        size_of::<HdrColor>() * width as usize * height as usize,
+    );
+
+    let mut transfer_command_buffer = CommandBuffer::new(queue.clone());
+    transfer_command_buffer.begin();
+    transfer_command_buffer.copy_image_to_buffer(&image, &mut transfer_buffer);
+    transfer_command_buffer.submit();
+
+    write_hdr_buffer_to_file(
+        "result.png",
+        1,
+        &transfer_buffer.copy_data::<HdrColor>(),
+        width as _,
+        height as _,
+    );
 
     // let ray_buffer_data: Vec<Ray> = frame_data.ray_buffer.copy_data();
     // write_ray_buffer_to_file(

@@ -67,14 +67,17 @@ Ray create_ray(vec2 resolution, vec2 frag_location, vec3 origin, float z){
     return ray;
 }
 
-void ray_generation_shader(uvec2 pixel, ivec2 resolution){
+void ray_generation_shader(uvec2 pixel, ivec2 resolution, inout RayPayload payload) {
     // Apply a random offset to random number index to decorrelate pixels
     uint offset = rand_seed(uint(pixel.x), uint(pixel.y));
     
     // Add a random offset to the pixel coordinates for antialiasing
     vec2 r = vec2(halton(offset + current_sample, 0),
                         halton(offset + current_sample, 1));
+
+    payload.color = vec3(1.0);
     
     Ray ray = create_ray(resolution, pixel + r, vec3(-0.5, 0.0, -3.0), 3.0);
-    trace(ray, 0.01, 1000.0, 0, CULL_MASK_OPAQUE);
+    trace(ray, 0.01, 10000.0, 0, 0, CULL_MASK_OPAQUE, payload);
+    imageStore(result, ivec2(pixel), vec4(payload.color, 1.0));
 }

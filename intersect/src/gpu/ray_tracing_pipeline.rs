@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
 use vk_utils::{
-    command_buffer::CommandBuffer, device_context::DeviceContext,
-    pipeline_descriptor::ComputePipeline,
+    buffer_resource::BufferResource, command_buffer::CommandBuffer, device_context::DeviceContext,
+    image2d_resource::Image2DResource, pipeline_descriptor::ComputePipeline,
 };
 
 use super::{
@@ -59,15 +59,101 @@ impl RayTracingPipeline {
 
         let template_src = template_src.replace("___ANY_HIT_SHADER___", &any_hit_shader);
 
-        let payload_content = descriptor
-            .ray_payload_descriptor
-            .attributes()
-            .iter()
-            .fold(String::new(), |acc, (name, data_type)| {
-                acc + &format!("{} {};\n", data_type, name)
-            });
+        let payload_content = descriptor.ray_payload_descriptor.attributes().iter().fold(
+            String::new(),
+            |acc, (name, att)| {
+                if att.is_array && att.array_size == 0 {
+                    acc + &format!("{} {}[];\n", att.data_type, name)
+                } else if att.is_array {
+                    acc + &format!("{} {}[{}];\n", att.data_type, name, att.array_size)
+                } else {
+                    acc + &format!("{} {};\n", att.data_type, name)
+                }
+            },
+        );
 
         let template_src = template_src.replace("___RAY_PAYLOAD___", &payload_content);
+
+        let buffer_bindings =
+            descriptor
+                .buffers
+                .iter()
+                .enumerate()
+                .fold(String::new(), |acc, (index, binding)| {
+                    let read_only = if binding.read_only() { "readonly" } else { "" };
+                    let buffer_string = acc
+                        + &format!(
+                            "layout(scalar, set = 1, binding = {}) {} buffer {} {{\n",
+                            index,
+                            read_only,
+                            binding.name(),
+                        );
+
+                    let buffer_string =
+                        binding
+                            .attributes()
+                            .iter()
+                            .fold(buffer_string, |acc, (name, att)| {
+                                if att.is_array && att.array_size == 0 {
+                                    acc + &format!("    {} {}[];\n", att.data_type, name)
+                                } else if att.is_array {
+                                    acc + &format!(
+                                        "   {} {}[{}];\n",
+                                        att.data_type, name, att.array_size
+                                    )
+                                } else {
+                                    acc + &format!("    {} {};\n", att.data_type, name)
+                                }
+                            });
+
+                    buffer_string + "\n};\n"
+                });
+
+        let image_bindings =
+            descriptor
+                .images
+                .iter()
+                .enumerate()
+                .fold(String::new(), |acc, (index, binding)| {
+                    let data_type = if binding.is_float { "f" } else { "" };
+                    let is_read_only = if binding.is_read_only { "readonly" } else { "" };
+                    acc + &format!(
+                        "layout(set = 2, binding = {}, rgba{}{}) uniform  {} image2D {};\n",
+                        index, binding.bits_per_channel, data_type, is_read_only, binding.name
+                    )
+                });
+
+        let template_src = template_src.replace("___IMAGE_BINDINGS___", &image_bindings);
+
+        let template_src = template_src.replace("___BUFFER_BINDINGS___", &buffer_bindings);
+
+        let miss_shader_sources: Vec<String> = descriptor
+            .miss_shader_sources
+            .iter()
+            .map(|src| match &src.source {
+                ShaderSource::File(path) => {
+                    std::fs::read_to_string(path).expect("Couldn't load Ray shader file")
+                }
+                ShaderSource::String(src) => src.clone(),
+            })
+            .collect();
+
+        let miss_shaders = miss_shader_sources
+            .iter()
+            .fold(String::new(), |acc, src| acc + src + "\n");
+
+        let template_src = template_src.replace("___MISS_SHADERS___", &miss_shaders);
+
+        let miss_shader_invocations =
+            descriptor.miss_shader_sources.iter().enumerate().fold(
+                String::new(),
+                |acc, (index, src)| {
+                    acc + &format!("case {}: {}(ray, payload); \n", index, &src.name)
+                },
+            ) + "default: break;";
+
+        let template_src =
+            template_src.replace("___MISS_SHADER_INVOCATIONS___", &miss_shader_invocations);
 
         #[cfg(debug_assertions)]
         println!("{}", template_src);
@@ -86,43 +172,6 @@ impl RayTracingPipeline {
             pipeline,
         }
     }
-
-    // pub fn prepare_to_render(&self, width: u32, height: u32) -> FrameData {
-    //     let mut uniform_buffer = BufferResource::new(
-    //         self.device.clone(),
-    //         size_of::<Vec2>(),
-    //         MemoryPropertyFlags::HOST_VISIBLE,
-    //         BufferUsageFlags::UNIFORM_BUFFER,
-    //     );
-
-    //     uniform_buffer.upload(&[width, height]);
-
-    //     let ray_buffer = BufferResource::new(
-    //         self.device.clone(),
-    //         self.ray_payload_size * width as usize * height as usize,
-    //         MemoryPropertyFlags::HOST_VISIBLE,
-    //         BufferUsageFlags::STORAGE_BUFFER,
-    //     );
-
-    //     let intersection_buffer = BufferResource::new(
-    //         self.device.clone(),
-    //         self.intersection_payload_size * width as usize * height as usize,
-    //         MemoryPropertyFlags::DEVICE_LOCAL,
-    //         BufferUsageFlags::STORAGE_BUFFER,
-    //     );
-
-    //     FrameData::new(
-    //         width as _,
-    //         height as _,
-    //         uniform_buffer,
-    //         ray_buffer,
-    //         intersection_buffer,
-    //     )
-    // }
-
-    // pub fn set_shader_buffer(&mut self, set: usize, binding: usize, buffer: &BufferResource) {
-    //     self.ray_shader.set_user_buffer(set, binding, buffer);
-    // }
 
     pub fn trace<T: Copy>(
         &mut self,
@@ -176,5 +225,13 @@ impl RayTracingPipeline {
         //     AccessFlags::MEMORY_READ,
         //     AccessFlags::MEMORY_WRITE,
         // );
+    }
+
+    pub fn set_storage_buffer(&mut self, location: usize, buffer: &BufferResource) {
+        self.pipeline.set_storage_buffer(1, location, buffer);
+    }
+
+    pub fn set_storage_image(&mut self, location: usize, image: &Image2DResource) {
+        self.pipeline.set_storage_image(2, location, image);
     }
 }

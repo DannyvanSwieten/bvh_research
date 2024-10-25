@@ -16,6 +16,7 @@ pub type HdrColor = Vec4;
 pub type Mat4 = Matrix4<f32>;
 
 pub enum DataType {
+    Uint32,
     Float,
     Vec2,
     Vec3,
@@ -26,6 +27,7 @@ pub enum DataType {
 impl DataType {
     pub fn byte_size(&self) -> usize {
         match self {
+            DataType::Uint32 => std::mem::size_of::<u32>(),
             DataType::Float => std::mem::size_of::<f32>(),
             DataType::Vec2 => std::mem::size_of::<Vec2>(),
             DataType::Vec3 => std::mem::size_of::<Vec3>(),
@@ -38,6 +40,7 @@ impl DataType {
 impl std::fmt::Display for DataType {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
+            DataType::Uint32 => write!(f, "uint"),
             DataType::Float => write!(f, "float"),
             DataType::Vec2 => write!(f, "vec2"),
             DataType::Vec3 => write!(f, "vec3"),
