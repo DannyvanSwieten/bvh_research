@@ -44,10 +44,6 @@ fn main() {
     let vertex_buffer =
         BufferResource::new_host_visible_with_data(device_context.clone(), &vertices);
     let index_buffer = BufferResource::new_host_visible_with_data(device_context.clone(), &indices);
-    let procedural_blas = Rc::new(Geometry::new_procedural(
-        AABB::new(Vec3::new(-1.0, -1.0, -1.0), Vec3::new(1.0, 1.0, 1.0)),
-        1,
-    ));
     let blas = Rc::new(Geometry::new_triangles(
         device_context.clone(),
         &vertex_buffer,
