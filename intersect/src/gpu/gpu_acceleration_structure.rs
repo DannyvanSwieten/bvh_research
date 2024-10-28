@@ -57,7 +57,7 @@ impl GpuTlas {
 
         let mut instance_buffer = BufferResource::new(
             device.clone(),
-            std::mem::size_of_val(&instances),
+            std::mem::size_of_val(instances.as_slice()),
             MemoryPropertyFlags::HOST_VISIBLE,
             BufferUsageFlags::STORAGE_BUFFER,
         );
@@ -65,7 +65,7 @@ impl GpuTlas {
 
         let mut tlas_buffer = BufferResource::new(
             device,
-            std::mem::size_of_val(&nodes),
+            std::mem::size_of_val(nodes.as_slice()),
             MemoryPropertyFlags::HOST_VISIBLE,
             BufferUsageFlags::STORAGE_BUFFER,
         );

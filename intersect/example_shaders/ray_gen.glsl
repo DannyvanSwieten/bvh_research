@@ -1,3 +1,5 @@
+#import "random.glsl"
+
 #define M_PI_F 3.14159
 
 const uint primes[] = {
@@ -64,7 +66,9 @@ Ray create_ray(vec2 resolution, vec2 frag_location, vec3 origin, float z){
 
 void ray_generation_shader(uvec2 pixel, ivec2 resolution, inout RayPayload payload) {
     // Apply a random offset to random number index to decorrelate pixel    
-    int spp = 2;
+    int spp = 10;
+    float f = 1.0 / float(spp);
+    vec3 color = vec3(0.0);
     for(int i = 0; i < spp; ++i)
     {
         uint offset = rand_seed(uint(pixel.x), uint(pixel.y));
@@ -73,7 +77,9 @@ void ray_generation_shader(uvec2 pixel, ivec2 resolution, inout RayPayload paylo
         vec2 r = vec2(halton(offset + i, 0),
                         halton(offset + i, 1));
         Ray ray = create_ray(resolution, pixel + r, vec3(-0.5, 0.0, -3.0), 3.0);
-        trace(ray, 0.01, 10000.0, 0, 0, CULL_MASK_OPAQUE, payload);
+        payload.color = vec3(1.0);
+        trace(ray, 0.01, 1000.0, 0, 0, CULL_MASK_OPAQUE, payload);
+        color += payload.color;
     }
-    imageStore(result, ivec2(pixel), vec4(payload.color / float(spp), 1.0));
+    imageStore(result, ivec2(pixel), vec4(color * f, 1.0));
 }

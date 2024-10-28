@@ -1,8 +1,13 @@
-use std::rc::Rc;
+use std::{
+    collections::{HashMap, HashSet},
+    path::Path,
+    rc::Rc,
+};
 
 use vk_utils::{
     buffer_resource::BufferResource, command_buffer::CommandBuffer, device_context::DeviceContext,
     image2d_resource::Image2DResource, pipeline_descriptor::ComputePipeline,
+    DescriptorSetLayoutBinding, DescriptorType, ShaderStageFlags,
 };
 
 use super::{
@@ -15,6 +20,26 @@ pub struct RayTracingPipeline {
     pipeline: ComputePipeline,
 }
 
+fn import_file(path: &Path, imported: &mut HashSet<String>) -> String {
+    std::fs::read_to_string(path)
+        .expect("Couldn't load Ray shader file")
+        .lines()
+        .fold(String::new(), |acc, line| {
+            if line.contains("#import") {
+                let import = line.split_whitespace().last().unwrap();
+                if !imported.contains(import) {
+                    let import_path = path.parent().unwrap().join(import);
+                    imported.insert(import.to_string());
+                    acc + &import_file(&import_path, imported)
+                } else {
+                    acc
+                }
+            } else {
+                acc + line + "\n"
+            }
+        })
+}
+
 impl RayTracingPipeline {
     pub fn new(device: Rc<DeviceContext>, descriptor: &RayTracingPipelineDescriptor) -> Self {
         let template_path = std::env::current_dir()
@@ -24,10 +49,10 @@ impl RayTracingPipeline {
         let template_src = std::fs::read_to_string(template_path)
             .expect("Couldn't load Ray generator template file");
 
+        let mut imported = HashSet::new();
+
         let ray_generation_shader = match &descriptor.ray_generation_source {
-            ShaderSource::File(path) => {
-                std::fs::read_to_string(path).expect("Couldn't load Ray generator file")
-            }
+            ShaderSource::File(path) => import_file(path, &mut imported),
             ShaderSource::String(src) => src.clone(),
         };
 
@@ -35,18 +60,14 @@ impl RayTracingPipeline {
             template_src.replace("___RAY_GENERATION_SHADER___", &ray_generation_shader);
 
         let closest_hit_shader = match &descriptor.closest_hit_shader_source {
-            ShaderSource::File(path) => {
-                std::fs::read_to_string(path).expect("Couldn't load Ray shader file")
-            }
+            ShaderSource::File(path) => import_file(path, &mut imported),
             ShaderSource::String(src) => src.clone(),
         };
 
         let template_src = template_src.replace("___CLOSEST_HIT_SHADER___", &closest_hit_shader);
 
         let any_hit_shader = match &descriptor.any_hit_shader_source {
-            Some(ShaderSource::File(path)) => {
-                std::fs::read_to_string(path).expect("Couldn't load Ray shader file")
-            }
+            Some(ShaderSource::File(path)) => import_file(path, &mut imported),
             Some(ShaderSource::String(src)) => src.clone(),
             None => "".to_string(),
         };
@@ -131,9 +152,7 @@ impl RayTracingPipeline {
             .miss_shader_sources
             .iter()
             .map(|src| match &src.source {
-                ShaderSource::File(path) => {
-                    std::fs::read_to_string(path).expect("Couldn't load Ray shader file")
-                }
+                ShaderSource::File(path) => import_file(path, &mut imported),
                 ShaderSource::String(src) => src.clone(),
             })
             .collect();
@@ -155,15 +174,106 @@ impl RayTracingPipeline {
         let template_src =
             template_src.replace("___MISS_SHADER_INVOCATIONS___", &miss_shader_invocations);
 
+        let intersection_shader_sources: Vec<String> = descriptor
+            .intersection_functions
+            .iter()
+            .map(|src| match &src {
+                ShaderSource::File(path) => {
+                    std::fs::read_to_string(path).expect("Couldn't load Ray shader file")
+                }
+                ShaderSource::String(src) => src.clone(),
+            })
+            .collect();
+
+        let intersection_shader_invocations = intersection_shader_sources.iter().enumerate().fold(
+            String::new(),
+            |acc, (index, src)| {
+                acc + &format!("case {}: {}(ray, instance, payload); \n", index, src)
+            },
+        ) + "default: break;";
+
+        let template_src = template_src.replace(
+            "___INTERSECTION_SHADER_INVOCATIONS___",
+            &intersection_shader_invocations,
+        );
+
         #[cfg(debug_assertions)]
         println!("{}", template_src);
+
+        // let mut imported_strings = HashSet::new();
+        // let mut shader_src_so_far = String::new();
+        // include_file(parent, import, &mut shader_src_so_far, imported_strings);
+
+        let import_lines: Vec<String> = template_src
+            .lines()
+            .flat_map(|line| {
+                if line.contains("#import") {
+                    Some(line.to_string())
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        let mut descriptors = HashMap::new();
+        descriptors.insert(
+            0_u32,
+            vec![
+                // Top level acceleration structure
+                DescriptorSetLayoutBinding::default()
+                    .binding(0)
+                    .descriptor_type(DescriptorType::STORAGE_BUFFER)
+                    .stage_flags(ShaderStageFlags::COMPUTE)
+                    .descriptor_count(1),
+                // Instance buffer
+                DescriptorSetLayoutBinding::default()
+                    .binding(1)
+                    .descriptor_type(DescriptorType::STORAGE_BUFFER)
+                    .stage_flags(ShaderStageFlags::COMPUTE)
+                    .descriptor_count(1),
+            ],
+        );
+
+        let buffer_descriptors: Vec<_> = descriptor
+            .buffers
+            .iter()
+            .enumerate()
+            .map(|(index, _)| {
+                DescriptorSetLayoutBinding::default()
+                    .binding(index as u32)
+                    .descriptor_type(DescriptorType::STORAGE_BUFFER)
+                    .stage_flags(ShaderStageFlags::COMPUTE)
+                    .descriptor_count(1)
+            })
+            .collect();
+
+        if !buffer_descriptors.is_empty() {
+            descriptors.insert(1, buffer_descriptors);
+        }
+
+        let image_descriptors: Vec<_> = descriptor
+            .images
+            .iter()
+            .enumerate()
+            .map(|(index, _)| {
+                DescriptorSetLayoutBinding::default()
+                    .binding(index as u32)
+                    .descriptor_type(DescriptorType::STORAGE_IMAGE)
+                    .stage_flags(ShaderStageFlags::COMPUTE)
+                    .descriptor_count(1)
+            })
+            .collect();
+
+        if !image_descriptors.is_empty() {
+            descriptors.insert(2, image_descriptors);
+        }
 
         let pipeline = ComputePipeline::new_from_source_string(
             device.clone(),
             descriptor.max_frames_in_flight,
             &template_src,
             "main",
-            None,
+            Some(descriptors),
         )
         .expect("Couldn't create RayTracingPipeline");
 
@@ -188,43 +298,6 @@ impl RayTracingPipeline {
 
         command_buffer.bind_compute_pipeline(&self.pipeline);
         command_buffer.dispatch_compute(width, height, 1);
-        // self.ray_generator.set_ray_buffer(&frame_data.ray_buffer);
-        // self.ray_intersector.set(
-        //     &frame_data.ray_buffer,
-        //     &frame_data.intersection_buffer,
-        //     acceleration_structure,
-        // );
-        // self.ray_shader.set(
-        //     &frame_data.ray_buffer,
-        //     &frame_data.intersection_buffer,
-        //     acceleration_structure,
-        // );
-
-        // self.ray_generator
-        //     .generate_rays(command_buffer, frame_data, constants);
-        // command_buffer.buffer_resource_barrier(
-        //     &frame_data.ray_buffer,
-        //     PipelineStageFlags::COMPUTE_SHADER,
-        //     PipelineStageFlags::COMPUTE_SHADER,
-        //     AccessFlags::MEMORY_WRITE,
-        //     AccessFlags::MEMORY_READ,
-        // );
-        // self.ray_intersector.intersect(command_buffer, frame_data);
-        // command_buffer.buffer_resource_barrier(
-        //     &frame_data.intersection_buffer,
-        //     PipelineStageFlags::COMPUTE_SHADER,
-        //     PipelineStageFlags::COMPUTE_SHADER,
-        //     AccessFlags::MEMORY_WRITE,
-        //     AccessFlags::MEMORY_READ,
-        // );
-        // self.ray_shader.shade_rays(command_buffer, frame_data);
-        // command_buffer.buffer_resource_barrier(
-        //     &frame_data.ray_buffer,
-        //     PipelineStageFlags::COMPUTE_SHADER,
-        //     PipelineStageFlags::COMPUTE_SHADER,
-        //     AccessFlags::MEMORY_READ,
-        //     AccessFlags::MEMORY_WRITE,
-        // );
     }
 
     pub fn set_storage_buffer(&mut self, location: usize, buffer: &BufferResource) {

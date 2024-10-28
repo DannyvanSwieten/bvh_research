@@ -83,3 +83,16 @@ vec3 sampleCosineWeightedHemisphere(vec2 u) {
     
     return vec3(sin_theta * cos_phi, cos_theta, sin_theta * sin_phi);
 }
+
+
+mat3 createCoordinateSystem(vec3 N) {
+	vec3 Nt, Nb;
+	if (abs(N.x) > abs(N.z)) {
+		Nt = vec3(-N.y, N.x, 0.0);
+	} else {
+		Nt = vec3(0.0, -N.z, N.y);
+	}
+	Nt = normalize(Nt);
+	Nb = cross(N, Nt);
+	return mat3(Nt, Nb, N);
+}

@@ -1,4 +1,4 @@
-use std::{rc::Rc, time::Instant};
+use std::{path::PathBuf, rc::Rc, time::Instant};
 
 use intersect::{
     gpu::{
@@ -13,7 +13,7 @@ use intersect::{
         },
     },
     read_triangle_file,
-    types::{DataType, HdrColor, Mat4, Vec3, AABB},
+    types::{DataType, HdrColor, Mat4},
     write_hdr_buffer_to_file,
 };
 use vk_utils::{
@@ -21,14 +21,10 @@ use vk_utils::{
     image2d_resource::Image2DResource, queue::CommandQueue, Format, ImageLayout, QueueFlags,
 };
 
-fn load_shader(name: &str) -> String {
-    let path = std::env::current_dir()
+fn shader_path() -> PathBuf {
+    std::env::current_dir()
         .unwrap()
         .join("intersect/example_shaders")
-        .join(name);
-
-    println!("Reading shader: {}", path.display());
-    std::fs::read_to_string(path).expect("Reading Shader File Failed")
 }
 #[derive(Clone, Copy)]
 struct Progress {
@@ -56,10 +52,11 @@ fn main() {
 
     let acceleration_structure = GpuTlas::new(device_context.clone(), &gpu_instances);
 
-    let ray_generator_source = ShaderSource::String(load_shader("ray_gen.glsl"));
-    let ray_shader_source = ShaderSource::String(load_shader("closest_hit.glsl"));
+    let shader_path = shader_path();
+    let ray_generator_source = ShaderSource::File(shader_path.join("ray_gen.glsl"));
+    let ray_shader_source = ShaderSource::File(shader_path.join("closest_hit.glsl"));
     let ray_miss_source = ShaderFunction::new(
-        ShaderSource::String(load_shader("miss.glsl")),
+        ShaderSource::File(shader_path.join("miss.glsl")),
         "first_miss_shader",
     );
 

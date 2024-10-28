@@ -1059,11 +1059,7 @@ checksum = "852e951cb7832cb45cb1169900d19760cfa39b82bc0ea9c0e5a14ae88411c98b"
 [[package]]
 name = "vk_utils"
 version = "0.1.0"
-<<<<<<< HEAD
-source = "git+https://github.com/DannyvanSwieten/vk_utils.git#da7082565a4a2d7ac1a5b1ef1c7bb76c1c385603"
-=======
-source = "git+https://github.com/DannyvanSwieten/vk_utils.git#8ebedabbf7f3700bb0642167377a7c0de19b26c6"
->>>>>>> 7233b27... results
+source = "git+https://github.com/DannyvanSwieten/vk_utils.git#f64df38dc2959ce039f0a69b715dee20bb8ea826"
 dependencies = [
  "ash",
  "byteorder",

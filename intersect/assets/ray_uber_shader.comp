@@ -47,7 +47,7 @@ struct Intersection{
     uint primitive_id;
 };
 
-layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer BlasRef{
+layout(buffer_reference, scalar, buffer_reference_align = 8) readonly buffer BlasRef{
     uint64_t vertex_buffer;
     uint64_t index_buffer;
     uint64_t triangle_buffer;
@@ -180,6 +180,7 @@ Intersection traverse_top_level(Ray ray, float t_min, float t_max, int ray_flags
     float d = t_max;
     while(true) {
         Node node = tlas[node_idx];
+        // Leaf node
         if (node.primitive_count > 0) {
             uint first = node.first_primitive;
             uint last = first + node.primitive_count;
@@ -204,6 +205,7 @@ Intersection traverse_top_level(Ray ray, float t_min, float t_max, int ray_flags
                     result.primitive_id = li;
                 }
             }
+            // No more nodes to traverse
             if (stack_ptr == 0) {
                 break;
             } else {
@@ -213,7 +215,7 @@ Intersection traverse_top_level(Ray ray, float t_min, float t_max, int ray_flags
             }
         }
 
-        uint left_child_idx = tlas[node_idx].first_primitive ;
+        uint left_child_idx = tlas[node_idx].first_primitive;
         uint right_child_idx = left_child_idx + 1;
         Node left_child = tlas[left_child_idx];
         Node right_child = tlas[right_child_idx];
@@ -255,13 +257,13 @@ float traverse_bttm_level(Ray ray, uint instance_id, inout float u, inout float 
 {
     Instance instance = instances[instance_id];
     uint32_t instance_flags = instance.flags;
-    // if(instance_flags != 0){
-    //     primitive_id = 0;
-
-    //     // ___INTERSECTION_CASES___
-        
-    //     return intersect_sphere(ray, vec3(0, 1, 0), 1.0, u, v);
-    // }
+    if(instance_flags != 0){
+        primitive_id = 0;
+        switch(instance_flags)
+        {
+            ___INTERSECTION_SHADER_INVOCATIONS___
+        }
+    }
     BlasRef blas_ref = BlasRef(instance.blas_address);
 
     Indices indices = Indices(blas_ref.index_buffer);
