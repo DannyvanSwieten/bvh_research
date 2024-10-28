@@ -136,7 +136,6 @@ fn main() {
     pipeline.set_storage_buffer(0, &index_buffer);
     pipeline.set_storage_buffer(1, &vertex_buffer);
     command_buffer.begin();
-    command_buffer.image_resource_transition(&mut image, ImageLayout::GENERAL);
     pipeline.trace(
         width,
         height,
