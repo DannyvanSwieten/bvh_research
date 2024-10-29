@@ -37,10 +37,9 @@ void ray_generation_shader(uvec2 pixel, ivec2 resolution, inout RayPayload paylo
             if(payload.hit)
             {
                 vec2 u = vec2(rand_float(seed), rand_float(seed));
-                sample_cosine_weighted_hemisphere(u);
                 mat3 cs = create_coordinate_system(payload.normal);
-                ray.direction = cs * sample_cosine_weighted_hemisphere(u);
                 ray.origin = ray.origin + ray.direction * payload.t;
+                ray.direction = cs * sample_cosine_weighted_hemisphere(u);
             }
             else
             {
