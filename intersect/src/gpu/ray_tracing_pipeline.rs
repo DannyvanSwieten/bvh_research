@@ -180,9 +180,7 @@ impl RayTracingPipeline {
             .intersection_functions
             .iter()
             .map(|src| match &src {
-                ShaderSource::File(path) => {
-                    std::fs::read_to_string(path).expect("Couldn't load Ray shader file")
-                }
+                ShaderSource::File(path) => import_file(path, &mut imported),
                 ShaderSource::String(src) => src.clone(),
             })
             .collect();
@@ -201,21 +199,6 @@ impl RayTracingPipeline {
 
         #[cfg(debug_assertions)]
         println!("{}", template_src);
-
-        // let mut imported_strings = HashSet::new();
-        // let mut shader_src_so_far = String::new();
-        // include_file(parent, import, &mut shader_src_so_far, imported_strings);
-
-        let import_lines: Vec<String> = template_src
-            .lines()
-            .flat_map(|line| {
-                if line.contains("#import") {
-                    Some(line.to_string())
-                } else {
-                    None
-                }
-            })
-            .collect();
 
         let mut descriptors = HashMap::new();
         descriptors.insert(
