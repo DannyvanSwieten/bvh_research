@@ -1,4 +1,4 @@
-
+#define M_PI_F 3.14159265358979323846
 
 // from http://holger.dammertz.org/stuff/notes_HammersleyOnHemisphere.html
 // Hacker's Delight, Henry S. Warren, 2001
@@ -72,7 +72,7 @@ vec2 rand_disk(inout uint seed)
 // Uses the inversion method to map two uniformly random numbers to a three dimensional
 // unit hemisphere where the probability of a given sample is proportional to the cosine
 // of the angle between the sample direction and the "up" direction (0, 1, 0)
-vec3 sampleCosineWeightedHemisphere(vec2 u) {
+vec3 sample_cosine_weighted_hemisphere(vec2 u) {
     float phi = 2.0f * M_PI_F * u.x;
     
     float cos_phi = cos(phi);
@@ -85,7 +85,7 @@ vec3 sampleCosineWeightedHemisphere(vec2 u) {
 }
 
 
-mat3 createCoordinateSystem(vec3 N) {
+mat3 create_coordinate_system(vec3 N) {
 	vec3 Nt, Nb;
 	if (abs(N.x) > abs(N.z)) {
 		Nt = vec3(-N.y, N.x, 0.0);

@@ -45,10 +45,7 @@ fn main() {
         &vertex_buffer,
         &index_buffer,
     ));
-    let gpu_instances = [
-        Instance::new(blas.clone(), 0).with_transform(Mat4::from_scale(0.25)),
-        // Instance::new(procedural_blas.clone(), 1),
-    ];
+    let gpu_instances = [Instance::new(blas.clone(), 0).with_transform(Mat4::from_scale(0.25))];
 
     let acceleration_structure = GpuTlas::new(device_context.clone(), &gpu_instances);
 
@@ -63,13 +60,37 @@ fn main() {
     let pipeline_descriptor =
         RayTracingPipelineDescriptor::new(ray_generator_source, ray_shader_source)
             .with_miss_function(ray_miss_source)
-            .with_ray_payload_descriptor(PayloadDescriptor::new().with_attribute(
-                "color",
-                StructAttribute {
-                    data_type: DataType::Vec3,
-                    ..Default::default()
-                },
-            ))
+            .with_ray_payload_descriptor(
+                PayloadDescriptor::new()
+                    .with_attribute(
+                        "color",
+                        StructAttribute {
+                            data_type: DataType::Vec3,
+                            ..Default::default()
+                        },
+                    )
+                    .with_attribute(
+                        "hit",
+                        StructAttribute {
+                            data_type: DataType::Bool,
+                            ..Default::default()
+                        },
+                    )
+                    .with_attribute(
+                        "normal",
+                        StructAttribute {
+                            data_type: DataType::Vec3,
+                            ..Default::default()
+                        },
+                    )
+                    .with_attribute(
+                        "t",
+                        StructAttribute {
+                            data_type: DataType::Float,
+                            ..Default::default()
+                        },
+                    ),
+            )
             .with_buffer_descriptor(
                 BufferDescriptor::new("IndexBuffer")
                     .with_attribute(
@@ -123,23 +144,12 @@ fn main() {
 
     let mut command_buffer = CommandBuffer::new(queue.clone());
 
-    // let frame_data = pipeline.prepare_to_render(width, height);
-    let progress = Progress {
-        frame: 0,
-        bounce: 0,
-    };
     let now = Instant::now();
     pipeline.set_storage_image(0, &image);
     pipeline.set_storage_buffer(0, &index_buffer);
     pipeline.set_storage_buffer(1, &vertex_buffer);
     command_buffer.begin();
-    pipeline.trace(
-        width,
-        height,
-        &acceleration_structure,
-        Some(&progress),
-        &mut command_buffer,
-    );
+    pipeline.trace(width, height, &acceleration_structure, &mut command_buffer);
     command_buffer.submit();
     println!("Elapsed: {:?} milliseconds", now.elapsed().as_millis());
 

@@ -1,51 +1,5 @@
 #import "random.glsl"
 
-#define M_PI_F 3.14159
-
-const uint primes[] = {
-    2,   3,  5,  7,
-    11, 13, 17, 19,
-    23, 29, 31, 37,
-    41, 43, 47, 53,
-};
-
-// Returns the i'th element of the Halton sequence using the d'th prime number as a
-// base. The Halton sequence is a "low discrepency" sequence: the values appear
-// random but are more evenly distributed then a purely random sequence. Each random
-// value used to render the image should use a different independent dimension 'd',
-// and each sample (frame) should use a different index 'i'. To decorrelate each
-// pixel, a random offset can be applied to 'i'.
-float halton(uint i, uint d) {
-    uint b = primes[d];
-    
-    float f = 1.0f;
-    float invB = 1.0f / b;
-    
-    float r = 0;
-    
-    while (i > 0) {
-        f = f * invB;
-        r = r + f * (i % b);
-        i = i / b;
-    }
-    
-    return r;
-}
-
-uint rand_seed(uint val0, uint val1)
-{
-	uint v0 = val0, v1 = val1, s0 = 0;
-
-	for (uint n = 0; n < 16; n++)
-	{
-		s0 += 0x9e3779b9;
-		v0 += ((v1 << 4) + 0xa341316c) ^ (v1 + s0) ^ ((v1 >> 5) + 0xc8013ea4);
-		v1 += ((v0 << 4) + 0xad90777d) ^ (v0 + s0) ^ ((v0 >> 5) + 0x7e95761e);
-	}
-
-	return v0;
-}
-
 Ray create_ray(vec2 resolution, vec2 frag_location, vec3 origin, float z){
     vec2 norm = frag_location / resolution;
     vec3 p0 = vec3(-1, 1, z);
@@ -66,19 +20,34 @@ Ray create_ray(vec2 resolution, vec2 frag_location, vec3 origin, float z){
 
 void ray_generation_shader(uvec2 pixel, ivec2 resolution, inout RayPayload payload) {
     // Apply a random offset to random number index to decorrelate pixel    
-    int spp = 10;
+    int spp = 128;
+    int max_depth = 6;
     float f = 1.0 / float(spp);
     vec3 color = vec3(0.0);
+    uint seed = rand_seed(uint(pixel.x), uint(pixel.y));
     for(int i = 0; i < spp; ++i)
     {
-        uint offset = rand_seed(uint(pixel.x), uint(pixel.y));
-    
-    // Add a random offset to the pixel coordinates for antialiasing
-        vec2 r = vec2(halton(offset + i, 0),
-                        halton(offset + i, 1));
+        vec2 r = vec2(rand_float(seed), rand_float(seed));
         Ray ray = create_ray(resolution, pixel + r, vec3(-0.5, 0.0, -3.0), 3.0);
         payload.color = vec3(1.0);
-        trace(ray, 0.01, 1000.0, 0, 0, CULL_MASK_OPAQUE, payload);
+
+        for(int depth = 0; depth < max_depth; ++depth)
+        {
+            trace(ray, 0.01, 1000.0, 0, 0, CULL_MASK_OPAQUE, payload);
+            if(payload.hit)
+            {
+                vec2 u = vec2(rand_float(seed), rand_float(seed));
+                sample_cosine_weighted_hemisphere(u);
+                mat3 cs = create_coordinate_system(payload.normal);
+                ray.direction = cs * sample_cosine_weighted_hemisphere(u);
+                ray.origin = ray.origin + ray.direction * payload.t;
+            }
+            else
+            {
+                break;
+            }
+        }
+
         color += payload.color;
     }
     imageStore(result, ivec2(pixel), vec4(color * f, 1.0));

@@ -26,7 +26,9 @@ fn import_file(path: &Path, imported: &mut HashSet<String>) -> String {
         .lines()
         .fold(String::new(), |acc, line| {
             if line.contains("#import") {
-                let import = line.split_whitespace().last().unwrap();
+                let begin = line.find('"');
+                let end = line.rfind('"');
+                let import = &line[begin.unwrap() + 1..end.unwrap()];
                 if !imported.contains(import) {
                     let import_path = path.parent().unwrap().join(import);
                     imported.insert(import.to_string());
@@ -283,12 +285,11 @@ impl RayTracingPipeline {
         }
     }
 
-    pub fn trace<T: Copy>(
+    pub fn trace(
         &mut self,
         width: u32,
         height: u32,
         acceleration_structure: &GpuTlas,
-        constants: Option<&T>,
         command_buffer: &mut CommandBuffer,
     ) {
         self.pipeline
@@ -297,7 +298,9 @@ impl RayTracingPipeline {
             .set_storage_buffer(0, 1, acceleration_structure.instance_buffer());
 
         command_buffer.bind_compute_pipeline(&self.pipeline);
-        command_buffer.dispatch_compute(width, height, 1);
+        command_buffer.push_compute_constants(&self.pipeline, 0, &(width, height));
+        let (x, y, _z) = self.pipeline.workgroup_size();
+        command_buffer.dispatch_compute(width / x, height / y, 1);
     }
 
     pub fn set_storage_buffer(&mut self, location: usize, buffer: &BufferResource) {
