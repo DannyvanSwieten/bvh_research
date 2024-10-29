@@ -20,8 +20,8 @@ Ray create_ray(vec2 resolution, vec2 frag_location, vec3 origin, float z){
 
 void ray_generation_shader(uvec2 pixel, ivec2 resolution, inout RayPayload payload) {
     // Apply a random offset to random number index to decorrelate pixel    
-    int spp = 128;
-    int max_depth = 6;
+    int spp = 32;
+    int max_depth = 32;
     float f = 1.0 / float(spp);
     vec3 color = vec3(0.0);
     uint seed = rand_seed(uint(pixel.x), uint(pixel.y));
@@ -38,7 +38,7 @@ void ray_generation_shader(uvec2 pixel, ivec2 resolution, inout RayPayload paylo
             {
                 vec2 u = vec2(rand_float(seed), rand_float(seed));
                 mat3 cs = create_coordinate_system(payload.normal);
-                ray.origin = ray.origin + ray.direction * payload.t;
+                ray.origin = ray.origin + ray.direction * payload.t + 0.001 * payload.normal;
                 ray.direction = cs * sample_cosine_weighted_hemisphere(u);
             }
             else
