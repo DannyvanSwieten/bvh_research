@@ -13,7 +13,7 @@ use intersect::{
         },
     },
     read_triangle_file,
-    types::{DataType, HdrColor, Mat4},
+    types::{DataType, HdrColor, Mat4, Vec3},
     write_hdr_buffer_to_file,
 };
 use vk_utils::{
@@ -45,7 +45,18 @@ fn main() {
         &vertex_buffer,
         &index_buffer,
     ));
-    let gpu_instances = [Instance::new(blas.clone(), 0).with_transform(Mat4::from_scale(0.25))];
+    let gpu_instances = [
+        Instance::new(blas.clone(), 0).with_transform(Mat4::from_scale(0.25)),
+        Instance::new(blas.clone(), 1).with_transform(
+            Mat4::from_translation(Vec3::new(0.5, 0.5, 0.5)) * Mat4::from_scale(0.25),
+        ),
+        Instance::new(blas.clone(), 2).with_transform(
+            Mat4::from_translation(Vec3::new(-0.5, 0.5, 0.5)) * Mat4::from_scale(0.25),
+        ),
+        Instance::new(blas.clone(), 3).with_transform(
+            Mat4::from_translation(Vec3::new(0.5, -0.5, 0.5)) * Mat4::from_scale(0.25),
+        ),
+    ];
 
     let acceleration_structure = GpuTlas::new(device_context.clone(), &gpu_instances);
 

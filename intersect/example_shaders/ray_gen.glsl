@@ -20,15 +20,15 @@ Ray create_ray(vec2 resolution, vec2 frag_location, vec3 origin, float z){
 
 void ray_generation_shader(uvec2 pixel, ivec2 resolution, inout RayPayload payload) {
     // Apply a random offset to random number index to decorrelate pixel    
-    int spp = 32;
-    int max_depth = 32;
+    int spp = 1;
+    int max_depth = 2;
     float f = 1.0 / float(spp);
     vec3 color = vec3(0.0);
     uint seed = rand_seed(uint(pixel.x), uint(pixel.y));
     for(int i = 0; i < spp; ++i)
     {
         vec2 r = vec2(rand_float(seed), rand_float(seed));
-        Ray ray = create_ray(resolution, pixel + r, vec3(-0.5, 0.0, -3.0), 3.0);
+        Ray ray = create_ray(resolution, pixel + r, vec3(-0.5, 0.0, -15.0), 1.0);
         payload.color = vec3(1.0);
 
         for(int depth = 0; depth < max_depth; ++depth)

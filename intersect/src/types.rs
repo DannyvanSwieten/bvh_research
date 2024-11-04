@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use cgmath::{InnerSpace, Matrix4, SquareMatrix, Vector2, Vector3, Vector4};
 
 pub type Vec2 = Vector2<f32>;
@@ -15,6 +17,7 @@ pub type HdrColor = Vec4;
 
 pub type Mat4 = Matrix4<f32>;
 
+#[derive(Clone, Copy)]
 pub enum DataType {
     Bool,
     Uint32,
@@ -23,6 +26,7 @@ pub enum DataType {
     Vec3,
     Vec4,
     Mat4,
+    Void,
 }
 
 impl DataType {
@@ -35,6 +39,7 @@ impl DataType {
             DataType::Vec3 => std::mem::size_of::<Vec3>(),
             DataType::Vec4 => std::mem::size_of::<Vec4>(),
             DataType::Mat4 => std::mem::size_of::<Mat4>(),
+            DataType::Void => 0,
         }
     }
 }
@@ -49,7 +54,14 @@ impl std::fmt::Display for DataType {
             DataType::Vec3 => write!(f, "vec3"),
             DataType::Vec4 => write!(f, "vec4"),
             DataType::Mat4 => write!(f, "mat4"),
+            DataType::Void => write!(f, "void"),
         }
+    }
+}
+
+impl Debug for DataType {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", self)
     }
 }
 
