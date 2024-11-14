@@ -1,6 +1,11 @@
+use std::rc::Rc;
+
 use compiler::{
     code_generator::{CodeGenerator, GeneratorContext},
+    compiler::Compiler,
+    document,
     function::{Function, FunctionOverload},
+    glsl_compiler::GlslCompiler,
     instruction::{Instruction, Location, Opcode},
 };
 use intersect::types::DataType;
@@ -14,7 +19,7 @@ impl CodeGenerator for ThreadIdCodeGenerator {
         ctx: &mut GeneratorContext,
     ) -> Vec<Instruction> {
         vec![Instruction {
-            opcode: Opcode::Load,
+            opcode: Opcode::Return,
             operands: vec![Location::Label("thread_id".to_string())],
             result: Some(ctx.next_free_register()),
         }]
@@ -22,14 +27,16 @@ impl CodeGenerator for ThreadIdCodeGenerator {
 }
 
 pub fn main() {
-    let function = Function::new("Thread ID")
+    let function = Function::new("thread_id")
         .with_overload(FunctionOverload::new().with_return_type(DataType::Vec2));
 
     let generator = ThreadIdCodeGenerator;
     let mut ctx = GeneratorContext::new();
 
-    let instructions = generator.output(0, &function.overloads[0], &mut ctx);
-    for instruction in instructions {
-        println!("{:?}", instruction);
-    }
+    let mut document = document::Document::new();
+    document.add_node("Thread ID", Rc::new(function), Rc::new(generator), 0);
+
+    let glsl_compiler = GlslCompiler {};
+    let result = glsl_compiler.compile(&mut ctx, &document);
+    println!("{}", result);
 }

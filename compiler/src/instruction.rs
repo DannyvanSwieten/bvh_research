@@ -4,6 +4,7 @@ pub enum Opcode {
     Call,
     Load,
     Add,
+    Return,
 }
 
 impl Debug for Opcode {
@@ -12,6 +13,7 @@ impl Debug for Opcode {
             Opcode::Call => write!(f, "Call"),
             Opcode::Load => write!(f, "Load"),
             Opcode::Add => write!(f, "Add"),
+            Opcode::Return => write!(f, "Return"),
         }
     }
 }

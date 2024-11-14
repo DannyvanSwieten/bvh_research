@@ -77,8 +77,8 @@ impl Debug for FunctionOverload {
 }
 
 pub struct Function {
-    pub name: String,
-    pub overloads: Vec<FunctionOverload>,
+    name: String,
+    overloads: Vec<FunctionOverload>,
 }
 
 impl Function {
@@ -97,6 +97,14 @@ impl Function {
     pub fn with_overloads(mut self, overloads: Vec<FunctionOverload>) -> Self {
         self.overloads = overloads;
         self
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn overloads(&self) -> &Vec<FunctionOverload> {
+        &self.overloads
     }
 }
 impl Display for Function {
