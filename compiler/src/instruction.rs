@@ -24,6 +24,7 @@ pub enum Location {
     Memory(u32),
     Immediate(i32),
     Label(String),
+    Argument(String),
 }
 
 impl Debug for Location {
@@ -33,6 +34,7 @@ impl Debug for Location {
             Location::Memory(mem) => write!(f, "Memory({})", mem),
             Location::Immediate(imm) => write!(f, "Immediate({})", imm),
             Location::Label(label) => write!(f, "Label({})", label),
+            Location::Argument(arg) => write!(f, "Argument({})", arg),
         }
     }
 }
